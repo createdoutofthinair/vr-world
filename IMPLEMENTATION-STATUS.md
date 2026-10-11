@@ -13,7 +13,7 @@ Updated: 11 October 2026. Product plan: v1.4. Foundation build: 0.1.0.
 | M3 partial slice | Shop recipe, sign surface, orbit/cutaway, flat-ground walking collision, custom textures, ZIP export | Doorway, adjacent wall, narrow footprint, and entrance-step collision fixtures |
 | M5 partial export | RWX writer/reader, PNG packaging, `c3-` names, actual archive reconstruction, `create solid` evaluation | Round trip, missing-asset rejection, changed-image rejection, unsupported-action rejection |
 | Themes initial slice | Five material palettes and seeded pattern variations | Saved semantic data; these are not complete biome/environment packs |
-| GitHub Pages delivery | Static Vite build and test/build/deploy workflow | Local production build; remote outcome recorded below after push |
+| GitHub Pages delivery | Static Vite build and test/build/deploy workflow | Local checks and GitHub Actions build/deploy succeeded |
 
 ## Verification performed
 
@@ -52,4 +52,9 @@ Start M4 with a connected two-room/two-storey reference: wall ownership, stair/l
 
 ## Remote delivery
 
-Pending initial repository push and Pages workflow result.
+- Source pushed to `createdoutofthinair/vr-world`, branch `main`.
+- Application commit: `b14e20f261fb0adce9bf9bfe2bfac1608d4fd53e`.
+- [GitHub Actions run 38162342159](https://github.com/createdoutofthinair/vr-world/actions/runs/38162342159): dependency install, 15 tests, production build, artifact upload, and Pages deployment all succeeded.
+- Deployment completed on 11 October 2026. The deploy job reported [https://createdoutofthinair.github.io/vr-world/](https://createdoutofthinair.github.io/vr-world/) as the environment URL. Editor navigation: `#editor`.
+- Published HTML, logo, main JavaScript, and stylesheet returned HTTP 200 with the expected content types. This is an HTTP delivery check, not an interactive browser test.
+- These checks confirm publication and automated validation. Browser/GPU and native VP inspection remain pending as stated above.

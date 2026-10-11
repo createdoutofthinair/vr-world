@@ -2,10 +2,10 @@
 
 A public website and browser-based modular building workshop, hosted together on GitHub Pages.
 
-- Website: `https://createdoutofthinair.github.io/vr-world/`
-- Editor: `https://createdoutofthinair.github.io/vr-world/#editor`
+- [Website](https://createdoutofthinair.github.io/vr-world/)
+- [Editor](https://createdoutofthinair.github.io/vr-world/#editor)
 
-These are the intended URLs; see the deployment workflow for the current deployment result.
+The foundation was successfully deployed on 11 October 2026. [Deployment and checks](https://github.com/createdoutofthinair/vr-world/actions/runs/38162342159) passed for commit `b14e20f`. Browser/GPU and native VP inspection remain pending.
 
 ## Foundation release
 
