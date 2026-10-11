@@ -52,4 +52,9 @@ Complete the M4 two-storey building reference with proper circulation and struct
 
 ## Remote delivery
 
-The prior 0.1 foundation is deployed at https://createdoutofthinair.github.io/vr-world/. This 0.2 release is prepared for the same main branch and Pages workflow. Its deployment outcome will be recorded after publication.
+Release 0.2 is deployed at https://createdoutofthinair.github.io/vr-world/ (editor: https://createdoutofthinair.github.io/vr-world/#editor).
+
+- Application commit: `d126c6d9dacd6fbeb343dc2f6f5de873f88407c4`.
+- GitHub Actions run [38165844439](https://github.com/createdoutofthinair/vr-world/actions/runs/38165844439): build, all 24 tests, and Pages deployment succeeded.
+- Public HTTP verification: the homepage references the current application bundle; the current JavaScript/CSS and all published scene/texture/provenance files (16 files) returned HTTP 200 and matched local release bytes by SHA-256.
+- This confirms artifact delivery, not browser/GPU or native VP visual validation. Those checks remain open above.
