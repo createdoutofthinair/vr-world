@@ -1,60 +1,55 @@
 # Implementation status
 
-Updated: 11 October 2026. Product plan: v1.4. Foundation build: 0.1.0.
+Updated: 11 October 2026. Product plan: v1.4. Scene release: 0.2.0.
 
-## Delivered in this change
+## Current scope
+
+This release responds to the mismatch between the plan's coordinated world themes and the foundation's material-only palettes. It advances sections 56–59 and the static portions of E1–E3 alongside M4/M5. None of the full environment/native milestones is declared complete.
 
 | Area | Implemented | Evidence |
 | --- | --- | --- |
-| Public website | c3 brand/logo, original city graphics, shrinking sticky header, features, palette selector, roadmap, Editor navigation | Production build; browser visual inspection pending |
-| M0 contracts | Semantic project, neutral geometry, provisional VP classic scale/winding, emitted RWX subset, dependency hashes | Independent asymmetric fixture, parser errors, package integrity fixtures |
-| M1 shell | Dockview panels, persistent layouts, project state, bounded history, local autosave, import/download, command palette | TypeScript/build; interactive pane persistence pending browser inspection |
-| M2 geometry | Single-room shells, walls, true openings, frames/glass, floor/ceiling, flat/gable roofs, basic furniture | Boundary configurations and deterministic geometry fixtures |
-| M3 partial slice | Shop recipe, sign surface, orbit/cutaway, flat-ground walking collision, custom textures, ZIP export | Doorway, adjacent wall, narrow footprint, and entrance-step collision fixtures |
-| M5 partial export | RWX writer/reader, PNG packaging, `c3-` names, actual archive reconstruction, `create solid` evaluation | Round trip, missing-asset rejection, changed-image rejection, unsupported-action rejection |
-| Themes initial slice | Five material palettes and seeded pattern variations | Saved semantic data; these are not complete biome/environment packs |
-| GitHub Pages delivery | Static Vite build and test/build/deploy workflow | Local checks and GitHub Actions build/deploy succeeded |
+| Theme contract | Architecture and biome are separate, saved controls; theme kits combine them; uploads and dimensions survive theme changes | Independence and preservation fixtures |
+| Architecture | Jungle raised veranda, supported steps, rain canopy and shades; desert parapets, courtyard paving and pergola; fantasy timber framing and steep gables/chimney; sci-fi service frames/modules; temperate retail awnings | Five kit landmarks; 15 theme/archetype entrance routes |
+| Interior/house slice | Furnished living/sleeping zones, bedroom partition with real passage for suitable dimensions, furniture legs/cushions/backs, stocked shop shelving | Geometry generation and circulation fixtures; upper storeys remain pending |
+| Plant foundation | Tapered swept trunks, connected branching tubes, root flare/buttresses, folded two-sided mesh leaves, species-specific fronds and bodies | Nondegenerate geometry, deterministic generation, skeleton references, bounded per-plant triangles |
+| Starter families | Broadleaf, canopy, acacia-like, ancient, conifer, palm, fern, broadleaf herb, agave, columnar cactus, alien fan tree, grass, fungi | 13 distinct generator outputs; software scene images |
+| Distribution | Independent seed streams, reusable variants, density controls, entrance/building exclusion zones, root adaptation, arid recipe choices | Density changes preserve existing tree variants/positions; route fixtures |
+| Owned terrain | Bounded heightfield mesh, flattened building and entry zone, path, rock outcrops; no native AW terrain dependency | Walking samples emitted triangles through a spatial index; exported route parity |
+| Materials | Five bundled CC0 ambientCG color maps, derived diffuse PNGs, generated leaves/patterns; uploads for all 15 semantic slots | Local file/hash/provenance checks, actual PNG dimensions, archive dependency tests |
+| Editor | Themes & Landscape / Plant Studio panes, independent biome selector, density/growth/relief controls, foliage inspection, scene/building framing, optional grid, default complete roof view | TypeScript/production build; browser interaction inspection pending |
+| Export | All scene geometry, terrain, plants, materials and walking metadata in the existing `c3-` package | Archive reconstructed from serialized RWX/PNG/actions; no authoring geometry shortcut |
+| Website | Theme cards show generated scene previews and current feature descriptions | Static production build; software-generated preview images inspected |
 
-## Verification performed
+## Verification
 
-- `npm test`: 15 meaningful fixtures passed, including 72 preset/boundary combinations.
-- `npm run build`: TypeScript passed and Vite production output generated for `/vr-world/`.
-- Fixed an entrance-step collision defect found by the walking fixtures.
-- Native VP client tests: **not performed**.
-- Browser/GPU visual and interactive tests: **not performed**. The available managed environment has no supported browser-control skill; no substitute browser test is claimed.
+- `npm test`: 24 fixtures, including 72 base-shell boundary configurations, 13 plant families, and 15 theme/archetype walking routes.
+- `npm run build`: strict TypeScript and GitHub Pages production output.
+- Software scene renders inspected for temperate, desert, jungle, fantasy and sci-fi. These are generated from the actual scene meshes and material colors/maps using a separate software rasterizer. They are **not WebGL or native VP screenshots**.
+- Representative scene sizes: temperate 54,264 triangles / 166 pieces; desert 17,456 / 203; jungle 80,602 / 250; fantasy 57,728 / 184; sci-fi 13,848 / 186. These are counts, not FPS measurements.
+- Fixed the new mixed-case foliage texture role producing an invalid RWX filename; all exported texture basenames are lowercase and prefixed.
+- Browser/GPU interaction, resize, accessibility and resource tests: **not performed**. The supported browser-control skill is unavailable in this managed environment.
+- Native VP comparison: **not performed**. Scale/winding, glass, collision and PNG behavior remain provisional.
 
-No milestone requiring native or visual evidence is marked complete merely because the source builds.
+## Persistence and provenance
 
-## Limits to resolve
+Version 1 documents migrate to schema/generator 2/0.2.0 with `migratedFrom: 0.1.0`, preserving existing building settings and uploads. The old local-storage document remains under its original key; version 2 saves separately. Dock layouts use a new version key so the new panes are initially visible.
 
-1. Provisional profile assumes 10 meters per RWX unit and clockwise target faces; confirm in a named VP build/renderer.
-2. AWG writer/group importer is not implemented. Placement JSON is a canonical project format, not a native interchange claim.
-3. Walking uses bounded circle/AABB collision on flat surfaces with a small step. Slopes, stairs, gravity, flying, and moving colliders need the later controller track.
-4. House/villa are foundation one-storey shells. Rooms, wings, floor voids, apartments, and Kennedy reference remain pending.
-5. Texture import normalizes images and embeds them. Full PBR ingestion, licensing-aware curated asset packs, advanced UV controls, and provider acquisition are pending.
-6. Native transparency/masks/material behavior and all move/rotate/frame animation remain pending. The only emitted/evaluated creation action is `solid`.
-7. The public graphics are illustrative concepts and are labeled accordingly. They do not advertise an implemented city generator.
-8. Browser accessibility, docking resize, context recovery, and long-session resource behavior need interactive checks.
+AmbientCG Bark012, Ground037, Rock035, WoodSiding006 and Bricks060 are bundled with source URLs, original/derived hashes, CC0 license links and modification records. The supplied images are flat tiling-preview color maps obtained from the provider's own public pages. They are resized for web delivery; the app derives 512 px neutral-luminance PNGs. Export retains the images actually used and their notices. Procedural-only surfaces remain selectable.
 
-## Model handoff
+## Remaining work in the detailed plan
 
-**A bounded switch to GPT-6.1 Sol Medium is now reasonable** for website refinements, help/onboarding, preset browser organization, panel copy, keyboard hints, conventional property controls, and material-library presentation. Preserve the established schema and neutral/export contracts.
+1. Native scale/winding/texture/solid reference package and a verified target profile; AWG serialization/import remains absent.
+2. M4 upper storey, real stairwell/landing/floor void, wall ownership, and continuous accessible circulation.
+3. M6–M8 reusable facades, apartments, meaningful multi-wing villas and mixed use; Kennedy reference still unresolved.
+4. Plant pruning, editable skeleton/attraction controls, growth stages, individual locked overrides, expanded desert species, biome masks and district-level resolution. Current placement is a compact parcel algorithm, not a complete ecosystem simulation.
+5. Terrain sculpting/material splats, retaining walls, road networks, intersections, bridges/viaducts, creeks and waterfalls.
+6. VP-first move/rotate runtime, animation fixtures and moving collision; no browser-only effects are advertised as exportable.
+7. Browser performance measurements, shared geometry/instancing/LOD budgets, long-session recovery, and native comparison. Material/geometry caching exists; performance gates are still open.
 
-Keep High for M4 circulation/stairs, reusable topology, native export corrections, AWG encoding/placement, VP motion semantics, terrain, procedural vegetation, and performance/collision defects. Native target uncertainties remain open and are not solved by switching models.
+## Next development task
 
-### Concrete next Medium task
-
-Improve the preset browser and in-app help without changing geometry/export contracts: searchable/category-filtered recipes, clear descriptions, a keyboard-controls/help panel, project-download reminders after quota failure, and contextual links to the current compatibility report. Complete browser inspection and record evidence when the supported browser environment is available.
-
-### Concrete next High task
-
-Start M4 with a connected two-room/two-storey reference: wall ownership, stair/landing, true upper-floor void, ceiling separation, and accessible route. Add topology/collision fixtures, then validate the exported scene. In parallel with the target owner, resolve the small native VP scale/winding/texture/solid fixtures before enabling AWG or motion presets.
+Complete the M4 two-storey building reference with proper circulation and structural joins, while checking this scene release in the browser and resolving native VP fixtures. Continue the detailed plan from measured evidence. UI-only polish is no longer the main next step; geometry, architectural variety and target validation remain the priority.
 
 ## Remote delivery
 
-- Source pushed to `createdoutofthinair/vr-world`, branch `main`.
-- Application commit: `b14e20f261fb0adce9bf9bfe2bfac1608d4fd53e`.
-- [GitHub Actions run 38162342159](https://github.com/createdoutofthinair/vr-world/actions/runs/38162342159): dependency install, 15 tests, production build, artifact upload, and Pages deployment all succeeded.
-- Deployment completed on 11 October 2026. The deploy job reported [https://createdoutofthinair.github.io/vr-world/](https://createdoutofthinair.github.io/vr-world/) as the environment URL. Editor navigation: `#editor`.
-- Published HTML, logo, main JavaScript, and stylesheet returned HTTP 200 with the expected content types. This is an HTTP delivery check, not an interactive browser test.
-- These checks confirm publication and automated validation. Browser/GPU and native VP inspection remain pending as stated above.
+The prior 0.1 foundation is deployed at https://createdoutofthinair.github.io/vr-world/. This 0.2 release is prepared for the same main branch and Pages workflow. Its deployment outcome will be recorded after publication.

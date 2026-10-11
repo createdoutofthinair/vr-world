@@ -1,102 +1,12 @@
 import { MeshData, Project, Vec3 } from "./project";
+import { buildLandscape } from "./landscape";
+import { decorateBuilding } from "./architecture";
 export interface Bounds {
   min: Vec3;
   max: Vec3;
 }
-export function box(
-  id: string,
-  label: string,
-  origin: Vec3,
-  size: Vec3,
-  material: MeshData["material"],
-  category: MeshData["category"] = "structure",
-  solid = true,
-): MeshData {
-  const [w, h, d] = size,
-    x = w / 2,
-    z = d / 2;
-  // Independent vertices per face preserve hard normals and physical-scale UVs.
-  const faces = [
-    {
-      v: [
-        [-x, 0, z],
-        [x, 0, z],
-        [x, h, z],
-        [-x, h, z],
-      ],
-      scale: [w, h],
-    },
-    {
-      v: [
-        [x, 0, -z],
-        [-x, 0, -z],
-        [-x, h, -z],
-        [x, h, -z],
-      ],
-      scale: [w, h],
-    },
-    {
-      v: [
-        [x, 0, z],
-        [x, 0, -z],
-        [x, h, -z],
-        [x, h, z],
-      ],
-      scale: [d, h],
-    },
-    {
-      v: [
-        [-x, 0, -z],
-        [-x, 0, z],
-        [-x, h, z],
-        [-x, h, -z],
-      ],
-      scale: [d, h],
-    },
-    {
-      v: [
-        [-x, h, z],
-        [x, h, z],
-        [x, h, -z],
-        [-x, h, -z],
-      ],
-      scale: [w, d],
-    },
-    {
-      v: [
-        [-x, 0, -z],
-        [x, 0, -z],
-        [x, 0, z],
-        [-x, 0, z],
-      ],
-      scale: [w, d],
-    },
-  ];
-  const positions: number[] = [],
-    uvs: number[] = [],
-    indices: number[] = [];
-  faces.forEach((f, i) => {
-    positions.push(...f.v.flat());
-    const [u, v] = f.scale;
-    uvs.push(0, 0, u, 0, u, v, 0, v);
-    const o = i * 4;
-    indices.push(o, o + 1, o + 2, o, o + 2, o + 3);
-  });
-  if (material === "sign")
-    for (let i = 0; i < uvs.length; i += 8)
-      uvs.splice(i, 8, 0, 0, 1, 0, 1, 1, 0, 1);
-  return {
-    id,
-    label,
-    origin,
-    positions,
-    uvs,
-    indices,
-    material,
-    category,
-    solid,
-  };
-}
+import { box } from "./mesh";
+export { box } from "./mesh";
 interface Opening {
   left: number;
   right: number;
@@ -120,20 +30,27 @@ export function buildScene(p: Project): MeshData[] {
     cat?: MeshData["category"],
     solid?: boolean,
   ) => parts.push(box(id, label, origin, size, mat, cat, solid));
+  if (!p.landscape.enabled)
+    add(
+      "site-ground",
+      "Parcel ground",
+      [0, -0.14, 0],
+      [w + 10, 0.12, d + 10],
+      "ground",
+      "site",
+    );
   add(
-    "site-ground",
-    "Parcel ground",
-    [0, -0.14, 0],
-    [w + 10, 0.12, d + 10],
-    "ground",
-    "site",
+    "building-floor",
+    "Interior floor",
+    [0, -0.04, 0],
+    [w, floor + 0.04, d],
+    "floor",
   );
-  add("building-floor", "Interior floor", [0, 0, 0], [w, floor, d], "floor");
   add(
     "entry-step",
     "Entrance apron",
-    [0, 0, d / 2 + 0.6],
-    [p.doorWidth + 0.5, floor, 1.2],
+    [0, -0.04, d / 2 + 0.6],
+    [p.doorWidth + 0.5, floor + 0.04, 1.2],
     "floor",
   );
   const availableWindowSpan = w / 2 - t - p.doorWidth / 2 - 0.2,
@@ -268,9 +185,14 @@ export function buildScene(p: Project): MeshData[] {
         "roof",
       );
     else {
-      const x = w / 2 + 0.25,
-        z = d / 2 + 0.25,
-        rise = Math.min(2, w * 0.22),
+      const overhang =
+          p.theme === "jungle" ? 0.75 : p.theme === "fantasy" ? 0.4 : 0.25,
+        x = w / 2 + overhang,
+        z = d / 2 + overhang,
+        rise =
+          p.theme === "fantasy"
+            ? Math.min(3.2, w * 0.35)
+            : Math.min(2, w * 0.22),
         positions = [
           -x,
           0,
@@ -456,9 +378,71 @@ export function buildScene(p: Project): MeshData[] {
       );
     }
   }
-  return parts;
+  return [...buildLandscape(p), ...decorateBuilding(p, parts)];
+}
+const boundsCache = new WeakMap<MeshData, Bounds>();
+const groundIndex = new WeakMap<MeshData, Map<string, number[]>>();
+function triangleHeight(mesh: MeshData, x: number, z: number): number {
+  let grid = groundIndex.get(mesh);
+  if (!grid) {
+    grid = new Map();
+    for (let i = 0; i < mesh.indices.length; i += 3) {
+      const ids = mesh.indices.slice(i, i + 3).map((n) => n * 3);
+      const xs = ids.map((n) => mesh.positions[n]),
+        zs = ids.map((n) => mesh.positions[n + 2]);
+      if (
+        Math.abs(
+          (xs[1] - xs[0]) * (zs[2] - zs[0]) - (xs[2] - xs[0]) * (zs[1] - zs[0]),
+        ) < 1e-10
+      )
+        continue;
+      for (
+        let cx = Math.floor(Math.min(...xs));
+        cx <= Math.floor(Math.max(...xs));
+        cx++
+      )
+        for (
+          let cz = Math.floor(Math.min(...zs));
+          cz <= Math.floor(Math.max(...zs));
+          cz++
+        ) {
+          const key = `${cx},${cz}`,
+            list = grid.get(key) ?? [];
+          list.push(i);
+          grid.set(key, list);
+        }
+    }
+    groundIndex.set(mesh, grid);
+  }
+  const xx = x - mesh.origin[0],
+    zz = z - mesh.origin[2];
+  let top = -Infinity;
+  for (const i of grid.get(`${Math.floor(xx)},${Math.floor(zz)}`) ?? []) {
+    const ids = mesh.indices.slice(i, i + 3).map((n) => n * 3),
+      xs = ids.map((n) => mesh.positions[n]),
+      zs = ids.map((n) => mesh.positions[n + 2]);
+    const denominator =
+      (zs[1] - zs[2]) * (xs[0] - xs[2]) + (xs[2] - xs[1]) * (zs[0] - zs[2]);
+    const a =
+      ((zs[1] - zs[2]) * (xx - xs[2]) + (xs[2] - xs[1]) * (zz - zs[2])) /
+      denominator;
+    const b =
+      ((zs[2] - zs[0]) * (xx - xs[2]) + (xs[0] - xs[2]) * (zz - zs[2])) /
+      denominator;
+    if (a >= -1e-8 && b >= -1e-8 && a + b <= 1 + 1e-8)
+      top = Math.max(
+        top,
+        a * mesh.positions[ids[0] + 1] +
+          b * mesh.positions[ids[1] + 1] +
+          (1 - a - b) * mesh.positions[ids[2] + 1] +
+          mesh.origin[1],
+      );
+  }
+  return top;
 }
 export function bounds(mesh: MeshData): Bounds {
+  const cached = boundsCache.get(mesh);
+  if (cached) return cached;
   const min: Vec3 = [Infinity, Infinity, Infinity],
     max: Vec3 = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < mesh.positions.length; i += 3)
@@ -467,7 +451,9 @@ export function bounds(mesh: MeshData): Bounds {
       min[j] = Math.min(min[j], n);
       max[j] = Math.max(max[j], n);
     }
-  return { min, max };
+  const result = { min, max };
+  boundsCache.set(mesh, result);
+  return result;
 }
 export function canStand(
   x: number,
@@ -480,7 +466,7 @@ export function canStand(
   const feet = eyeY - eyeHeight + 0.04,
     top = eyeY + 0.12;
   return !meshes.some((m) => {
-    if (!m.solid) return false;
+    if (!m.solid || m.walkable || m.id === "site-ground") return false;
     const b = bounds(m);
     if (b.max[1] <= feet || b.min[1] >= top) return false;
     const nx = Math.max(b.min[0], Math.min(x, b.max[0])),
@@ -498,20 +484,25 @@ export function moveWalker(
   const surface = (xx: number, zz: number) => {
     let top = -Infinity;
     for (const m of meshes) {
-      if (!m.solid) continue;
       if (
-        m.category !== "site" &&
-        m.id !== "building-floor" &&
-        m.id !== "entry-step"
+        !m.solid ||
+        (!m.walkable &&
+          m.id !== "site-ground" &&
+          m.id !== "building-floor" &&
+          m.id !== "entry-step")
       )
         continue;
       const b = bounds(m);
-      const closestX = Math.max(b.min[0], Math.min(xx, b.max[0]));
-      const closestZ = Math.max(b.min[2], Math.min(zz, b.max[2]));
-      // Anticipate a small step when the capsule reaches its edge, before its
-      // centre crosses it. Otherwise the riser blocks the capsule permanently.
-      if ((xx - closestX) ** 2 + (zz - closestZ) ** 2 < 0.24 ** 2)
-        top = Math.max(top, b.max[1]);
+      if (m.id === "site-ground") {
+        if (xx < b.min[0] || xx > b.max[0] || zz < b.min[2] || zz > b.max[2])
+          continue;
+        top = Math.max(top, triangleHeight(m, xx, zz));
+      } else {
+        const closestX = Math.max(b.min[0], Math.min(xx, b.max[0])),
+          closestZ = Math.max(b.min[2], Math.min(zz, b.max[2]));
+        if ((xx - closestX) ** 2 + (zz - closestZ) ** 2 < 0.24 ** 2)
+          top = Math.max(top, b.max[1]);
+      }
     }
     return top + 1.68;
   };

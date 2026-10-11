@@ -16,7 +16,8 @@ import {
   parseRWX,
   serializeRWX,
 } from "./rwx";
-import { pngBytes, sha256, textureImage } from "./textures";
+import { pngBytes, sha256, textureImage, pngDimensions } from "./textures";
+import { loadStandardTextures, standardSource } from "./standard-textures";
 interface Placement {
   id: string;
   label: string;
@@ -25,6 +26,7 @@ interface Placement {
   positionMeters: MeshData["origin"];
   material: MaterialRole;
   solid: boolean;
+  walkable?: boolean;
   action: string;
 }
 interface Manifest {
@@ -57,7 +59,7 @@ The classic profile provisionally uses 10 meters per RWX unit and clockwise face
 
 Host object-path/models and object-path/textures on your chosen object path after checking your client's hosting conventions. Texture references omit the PNG extension. c3-placements.json records world-space positions in meters and the intended solid on/off action. It is our canonical format, NOT an AWG or native VP import file. The AWG writer and editable group importer are pending; objects currently require manual placement or a separately implemented import adapter.
 
-All rotations are identity in this foundation export. Doors are open geometry; no interactive door action is promised. Theme presets currently select material palettes. Cities, full procedural vegetation, mesh terrain, and motion effects are planned follow-on milestones.
+All rotations are identity in this foundation export. Doors are open geometry; no interactive door action is promised. World themes now select architectural details and a default biome. Owned mesh terrain, entrance paths, and procedural plant geometry are included. Architecture and biome can be combined independently. City layout, complete species catalogs, waterways, and motion remain later milestones. Walkable placement metadata directs the browser controller to the actual exported ground and step meshes; native solidity still comes from create solid.
 
 Generated material patterns are original procedural assets. Uploaded textures retain their user's provenance. The editable project includes the normalized textures actually used.
 `;
@@ -66,6 +68,10 @@ export async function createPackage(project: Project): Promise<ExportBundle> {
     meshes = buildScene(project),
     specs = materialsFor(project),
     images = {} as Record<MaterialRole, string>;
+  const standardPatterns = dependencyRoles(meshes)
+    .filter((role) => standardSource(specs[role], project))
+    .map((role) => specs[role].pattern);
+  if (standardPatterns.length) await loadStandardTextures(standardPatterns);
   const manifest: Manifest = {
     schemaVersion: 1,
     projectName: project.name,
@@ -80,14 +86,13 @@ export async function createPackage(project: Project): Promise<ExportBundle> {
     images[role] = image;
     const bytes = pngBytes(image),
       hash = await sha256(bytes),
-      name = `c3-${role}-${hash.slice(0, 16)}`,
+      name = `c3-${role.toLowerCase()}-${hash.slice(0, 16)}`,
       path = `object-path/textures/${name}.png`;
     textureRefs[role] = name;
     manifest.textures[name] = {
       path,
       hash,
-      width: project.textures[role]?.width ?? (role === "sign" ? 1024 : 256),
-      height: project.textures[role]?.height ?? (role === "sign" ? 128 : 256),
+      ...pngDimensions(bytes),
     };
     zip.file(path, bytes);
   }
@@ -114,6 +119,7 @@ export async function createPackage(project: Project): Promise<ExportBundle> {
       positionMeters: mesh.origin,
       material: mesh.material,
       solid: mesh.solid,
+      walkable: mesh.walkable,
       action: `create solid ${mesh.solid ? "on" : "off"}`,
     });
   }
@@ -126,6 +132,18 @@ export async function createPackage(project: Project): Promise<ExportBundle> {
     JSON.stringify(
       {
         procedural: "Original c3 generated texture patterns",
+        standard: dependencyRoles(meshes)
+          .map((role) => ({
+            role,
+            source: standardSource(specs[role], project),
+          }))
+          .filter((item) => item.source)
+          .map((item) => ({
+            ...item,
+            derived:
+              "512 px neutral-luminance PNG; semantic colour is stored in RWX",
+            author: "ambientCG / Lennart Demes",
+          })),
         uploads: Object.fromEntries(
           Object.entries(project.textures).map(([k, t]) => [
             k,
@@ -218,6 +236,7 @@ export async function readProducedPackage(
       color: parsed.color,
       opacity: parsed.opacity,
     };
+    parsed.mesh.walkable = p.walkable;
     meshes.push(parsed.mesh);
   }
   return { meshes, images, specs };

@@ -54,8 +54,8 @@ const features = [
   {
     icon: Trees,
     title: "Grow from a room to a world.",
-    text: "Cities, terrain, procedural plants, paths, and moving waterfalls are on the roadmap. Follow each release as the world grows.",
-    tag: "PLANNED",
+    text: "Five architectural kits, independent biomes, procedural trees and plants, owned terrain, and clear entrance paths. Shape the landscape around your building.",
+    tag: "AVAILABLE NOW",
   },
 ];
 export function Website() {
@@ -94,7 +94,7 @@ export function Website() {
               Features
             </a>
             <a href="#worlds" onClick={() => setMenu(false)}>
-              World palettes
+              World themes
             </a>
             <a href="#workflow" onClick={() => setMenu(false)}>
               How it works
@@ -348,14 +348,14 @@ export function Website() {
           <div className="section-heading">
             <div>
               <div className="eyebrow dark">
-                FIVE PALETTES. MANY DIRECTIONS.
+                FIVE WORLDS. DISTINCT CHARACTER.
               </div>
               <h2>Where will you begin?</h2>
             </div>
             <p>
-              Try a palette in the editor today.
+              Explore architecture and vegetation together.
               <br />
-              Full environment kits are on the roadmap.
+              Then mix the building style and biome yourself.
             </p>
           </div>
           <div className="world-picker">
@@ -374,7 +374,7 @@ export function Website() {
           <div className={`theme-showcase theme-${theme}`}>
             <div>
               <span className="theme-index">
-                WORLD PALETTE / {theme.toUpperCase()}
+                WORLD THEME / {theme.toUpperCase()}
               </span>
               <h3>
                 {THEMES[theme].label}
@@ -383,11 +383,17 @@ export function Website() {
               </h3>
               <p>{THEMES[theme].caption}</p>
               <a className="btn dark-btn" href={`#editor?theme=${theme}`}>
-                Try this palette <ArrowUpRight size={17} />
+                Explore this world <ArrowUpRight size={17} />
               </a>
-              <small>Illustration shows planned environment direction.</small>
+              <small>
+                Generated geometry preview. Open the editor for textured 3D.
+              </small>
             </div>
-            <WorldIllustration theme={theme} compact />
+            <img
+              className="generated-scene"
+              src={`${import.meta.env.BASE_URL}scenes/c3-${theme}.png`}
+              alt={`${THEMES[theme].label} architecture and procedural vegetation`}
+            />
           </div>
         </section>
         <section id="workflow" className="section workflow-section">
@@ -403,7 +409,7 @@ export function Website() {
               {
                 icon: Paintbrush,
                 title: "Shape the details.",
-                text: "Adjust openings, roof and interior. Choose a palette, add your textures, and arrange your views.",
+                text: "Adjust openings, roof and interior. Choose a world theme, shape its vegetation, add your textures, and arrange your views.",
               },
               {
                 icon: Footprints,
@@ -449,8 +455,8 @@ export function Website() {
               <div>
                 <b>Building workshop</b>
                 <p>
-                  Configurable shells, interiors, uploads, docking, walkthrough,
-                  and provisional RWX packages.
+                  Themed architecture, furnished rooms, procedural plants, owned
+                  terrain, uploads, walkthrough, and provisional RWX packages.
                 </p>
               </div>
               <small>NOW</small>
@@ -471,8 +477,8 @@ export function Website() {
               <div>
                 <b>Streets, cities & living landscapes</b>
                 <p>
-                  Seeded roads, custom terrain, procedural plants, creek paths,
-                  waterfalls, and theme kits.
+                  Connected roads and districts, richer terrain, creek networks,
+                  waterfalls, and animated world effects.
                 </p>
               </div>
               <small>PLANNED</small>

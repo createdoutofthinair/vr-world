@@ -11,7 +11,13 @@ import {
   Eye,
   Layers3,
 } from "lucide-react";
-import { MeshData, materialsFor, MaterialRole, Vec3 } from "../core/project";
+import {
+  MeshData,
+  materialsFor,
+  MaterialRole,
+  Vec3,
+  BIOMES,
+} from "../core/project";
 import { moveWalker } from "../core/geometry";
 import { textureImage } from "../core/textures";
 import { useStudio } from "./store";
@@ -41,7 +47,9 @@ interface Runtime {
   orbit: OrbitControls;
   walk: PointerLockControls;
   group: THREE.Group;
-  frame: () => void;
+  frame: (buildingOnly?: boolean) => void;
+  light: THREE.DirectionalLight;
+  grid: THREE.GridHelper;
 }
 export function Viewport() {
   const s = useStudio(),
@@ -50,6 +58,7 @@ export function Viewport() {
     current = useRef(s),
     [error, setError] = useState(""),
     [locked, setLocked] = useState(false),
+    [showGrid, setShowGrid] = useState(false),
     [coords, setCoords] = useState("0.0, 0.0, 0.0"),
     [contextRevision, setContextRevision] = useState(0);
   current.current = s;
@@ -69,7 +78,7 @@ export function Viewport() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.02;
     host.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#d5dcd9");
@@ -79,38 +88,56 @@ export function Viewport() {
       walk = new PointerLockControls(camera, renderer.domElement);
     orbit.enableDamping = true;
     orbit.dampingFactor = 0.08;
-    orbit.maxDistance = 55;
+    orbit.maxDistance = 90;
     orbit.minDistance = 1;
     orbit.maxPolarAngle = Math.PI / 2 - 0.03;
     const group = new THREE.Group();
     scene.add(group);
-    scene.add(new THREE.HemisphereLight("#eef8ff", "#65735b", 2.5));
+    scene.add(new THREE.HemisphereLight("#e8f1ff", "#766957", 1.7));
     const light = new THREE.DirectionalLight("#fff0d6", 3.2);
-    light.position.set(-12, 22, 15);
+    light.position.set(-15, 26, 12);
     light.castShadow = true;
     light.shadow.mapSize.set(2048, 2048);
     Object.assign(light.shadow.camera, {
-      left: -22,
-      right: 22,
-      top: 22,
-      bottom: -22,
+      left: -35,
+      right: 35,
+      top: 35,
+      bottom: -35,
       near: 0.5,
       far: 70,
     });
-    light.shadow.normalBias = 0.035;
+    light.shadow.normalBias = 0.018;
+    light.shadow.bias = -0.00008;
     scene.add(light);
     const grid = new THREE.GridHelper(60, 60, "#829a91", "#a0afa7");
     grid.position.y = -0.017;
+    grid.visible = false;
     scene.add(grid);
-    const frame = () => {
+    const frame = (buildingOnly = false) => {
       walk.unlock();
       orbit.enabled = true;
       const p = current.current.project;
-      camera.position.set(p.width * 1.25, p.height * 2.4, p.depth * 1.7);
-      orbit.target.set(0, p.height * 0.4, 0);
+      const margin =
+        p.landscape.enabled && !buildingOnly ? p.landscape.extent : 0;
+      camera.position.set(
+        p.width * 1.2 + margin,
+        p.height * 2.1 + margin * 0.9,
+        p.depth * 1.55 + margin * 1.15,
+      );
+      orbit.target.set(0, p.height * 0.65, 0);
       orbit.update();
     };
-    runtime.current = { renderer, scene, camera, orbit, walk, group, frame };
+    runtime.current = {
+      renderer,
+      scene,
+      camera,
+      orbit,
+      walk,
+      group,
+      frame,
+      light,
+      grid,
+    };
     frame();
     const resize = new ResizeObserver(() => {
       const { width, height } = host.getBoundingClientRect();
@@ -265,6 +292,7 @@ export function Viewport() {
       grid.geometry.dispose();
       (grid.material as THREE.Material).dispose();
       light.shadow.map?.dispose();
+      if (scene.background instanceof THREE.Texture) scene.background.dispose();
       renderer.dispose();
       renderer.domElement.remove();
       runtime.current = null;
@@ -279,7 +307,8 @@ export function Viewport() {
       meshes = exported ? s.bundle!.meshes : s.meshes,
       specs = exported ? s.bundle!.specs : materialsFor(s.project),
       loader = new THREE.TextureLoader(),
-      cache = new Map<MaterialRole, THREE.MeshStandardMaterial>();
+      cache = new Map<MaterialRole, THREE.MeshStandardMaterial>(),
+      geometryCache = new Map<number[], THREE.BufferGeometry>();
     for (const part of meshes) {
       if (part.category === "roof" && s.cutaway) continue;
       const spec = specs[part.material];
@@ -306,15 +335,19 @@ export function Viewport() {
         });
         cache.set(part.material, mat);
       }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(part.positions, 3),
-      );
-      g.setAttribute("uv", new THREE.Float32BufferAttribute(part.uvs, 2));
-      g.setIndex(part.indices);
-      g.computeVertexNormals();
-      g.computeBoundingBox();
+      let g = geometryCache.get(part.positions);
+      if (!g) {
+        g = new THREE.BufferGeometry();
+        g.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(part.positions, 3),
+        );
+        g.setAttribute("uv", new THREE.Float32BufferAttribute(part.uvs, 2));
+        g.setIndex(part.indices);
+        g.computeVertexNormals();
+        g.computeBoundingBox();
+        geometryCache.set(part.positions, g);
+      }
       const mesh = new THREE.Mesh(g, mat);
       mesh.position.fromArray(part.origin);
       mesh.userData = { id: part.id };
@@ -322,7 +355,15 @@ export function Viewport() {
       mesh.receiveShadow = true;
       group.add(mesh);
     }
-  }, [s.meshes, s.bundle, s.view, s.cutaway, s.project, contextRevision]);
+  }, [
+    s.meshes,
+    s.bundle,
+    s.view,
+    s.cutaway,
+    s.project,
+    contextRevision,
+    s.assetRevision,
+  ]);
   useEffect(() => {
     const rt = runtime.current;
     if (!rt) return;
@@ -352,13 +393,43 @@ export function Viewport() {
     if (s.mode === "walk") {
       rt.walk.unlock();
       rt.orbit.enabled = false;
-      rt.camera.position.set(0, 1.66, s.project.depth / 2 + 2.5);
+      rt.camera.position.set(0, 1.66, s.project.depth / 2 + 5);
       rt.camera.lookAt(0, 1.66, 0);
     } else {
       rt.walk.unlock();
       rt.frame();
     }
   }, [s.mode]);
+  useEffect(() => {
+    const rt = runtime.current;
+    if (!rt) return;
+    const biome = BIOMES[s.project.biome];
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 256;
+    const c = canvas.getContext("2d")!,
+      gradient = c.createLinearGradient(0, 0, 0, 256);
+    gradient.addColorStop(0, biome.sky);
+    gradient.addColorStop(0.65, biome.fog);
+    gradient.addColorStop(1, biome.fog);
+    c.fillStyle = gradient;
+    c.fillRect(0, 0, 2, 256);
+    if (rt.scene.background instanceof THREE.Texture)
+      rt.scene.background.dispose();
+    const sky = new THREE.CanvasTexture(canvas);
+    sky.colorSpace = THREE.SRGBColorSpace;
+    rt.scene.background = sky;
+    rt.scene.fog = new THREE.Fog(biome.fog, 55, 140);
+    rt.light.color.set(biome.sun);
+    if (s.mode === "orbit") rt.frame();
+  }, [
+    s.project.biome,
+    s.project.landscape.extent,
+    s.project.landscape.enabled,
+  ]);
+  useEffect(() => {
+    if (runtime.current) runtime.current.grid.visible = showGrid;
+  }, [showGrid]);
   const beginWalk = () => {
     try {
       runtime.current?.walk.lock();
@@ -396,10 +467,20 @@ export function Viewport() {
         </button>
         <button
           className="tool"
-          onClick={() => runtime.current?.frame()}
+          onClick={() => {
+            s.setMode("orbit");
+            runtime.current?.frame(true);
+          }}
           title="Frame building"
         >
-          <Maximize2 size={15} />
+          <Maximize2 size={15} /> Building
+        </button>
+        <button
+          className={showGrid ? "tool active" : "tool"}
+          onClick={() => setShowGrid(!showGrid)}
+          title="Toggle construction grid"
+        >
+          Grid
         </button>
         <button
           className="tool"
@@ -407,16 +488,19 @@ export function Viewport() {
             s.setMode("orbit");
             runtime.current?.frame();
           }}
-          title="Reset camera"
+          title="Frame whole scene"
         >
-          <RotateCcw size={14} />
+          <RotateCcw size={14} /> Scene
         </button>
       </div>
       <div ref={container} className="viewport-canvas" />
       <div className="viewport-tag">
         <span className="status-dot" />
         {s.view === "export" ? "EXPORTED RWX" : "LIVE AUTHORING"}
-        <span> / {s.project.theme.toUpperCase()}</span>
+        <span>
+          {" "}
+          / {s.project.theme.toUpperCase()} · {s.project.biome.toUpperCase()}
+        </span>
       </div>
       <div className="axis-compass">
         <span>N</span>

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "Bark012",
+    "filename": "c3-bark012.jpg",
+    "source": "https://ambientcg.com/a/Bark012",
+    "download": "https://f003.backblazeb2.com/file/ambientCG-Web/media/surface-preview/Bark012/Bark012_SQ_Color.jpg?56163",
+    "sourceFile": "Bark012_SQ_Color.jpg",
+    "sha256": "4a4555185c21bc80a9cde55c186928b6522a164a9af8e60c6a61c921728348b1",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "license": "CC0-1.0",
+    "author": "ambientCG / Lennart Demes",
+    "modifications": "Official CC0 tiling-preview color map resized to 1024 px JPEG. The app derives a 512 px neutral-luminance PNG for tinting.",
+    "sourceSha256": "ece8455722d0fb9e83379c785dedcc405f52a5e2a9ec43334a8e9fd060d922a1"
+  },
+  {
+    "id": "Ground037",
+    "filename": "c3-ground037.jpg",
+    "source": "https://ambientcg.com/a/Ground037",
+    "download": "https://f003.backblazeb2.com/file/ambientCG-Web/media/surface-preview/Ground037/Ground037_SQ_Color.jpg?6857",
+    "sourceFile": "Ground037_SQ_Color.jpg",
+    "sha256": "150c082bc2ccda89c1635f33716e65b955f59a3081422b3ed6fa67a83a61a643",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "license": "CC0-1.0",
+    "author": "ambientCG / Lennart Demes",
+    "modifications": "Official CC0 tiling-preview color map resized to 1024 px JPEG. The app derives a 512 px neutral-luminance PNG for tinting.",
+    "sourceSha256": "728ff4fea1de60ae7219bf0fa05488f09f79e7612664d683a5fd6a555264942d"
+  },
+  {
+    "id": "Rock035",
+    "filename": "c3-rock035.jpg",
+    "source": "https://ambientcg.com/a/Rock035",
+    "download": "https://f003.backblazeb2.com/file/ambientCG-Web/media/surface-preview/Rock035/Rock035_SQ_Color.jpg?44179",
+    "sourceFile": "Rock035_SQ_Color.jpg",
+    "sha256": "21663e35b2fd1ba59903170f578cfb43fcfa42bac736dfe451b1a4f91bb7d1f9",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "license": "CC0-1.0",
+    "author": "ambientCG / Lennart Demes",
+    "modifications": "Official CC0 tiling-preview color map resized to 1024 px JPEG. The app derives a 512 px neutral-luminance PNG for tinting.",
+    "sourceSha256": "a019b048e998969df533ac230c462f8899a63f08174f267b6e9978fbf4d702da"
+  },
+  {
+    "id": "WoodSiding006",
+    "filename": "c3-woodsiding006.jpg",
+    "source": "https://ambientcg.com/a/WoodSiding006",
+    "download": "https://f003.backblazeb2.com/file/ambientCG-Web/media/surface-preview/WoodSiding006/WoodSiding006_SQ_Color.jpg?26432",
+    "sourceFile": "WoodSiding006_SQ_Color.jpg",
+    "sha256": "2e887128311f358a773c375fe3f81e2738b9dd29617e2f86f25626162a65f037",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "license": "CC0-1.0",
+    "author": "ambientCG / Lennart Demes",
+    "modifications": "Official CC0 tiling-preview color map resized to 1024 px JPEG. The app derives a 512 px neutral-luminance PNG for tinting.",
+    "sourceSha256": "b002141cba23c0c949c802020289ec98530ca2251676d15fc741784d70a2405f"
+  },
+  {
+    "id": "Bricks060",
+    "filename": "c3-bricks060.jpg",
+    "source": "https://ambientcg.com/a/Bricks060",
+    "download": "https://f003.backblazeb2.com/file/ambientCG-Web/media/surface-preview/Bricks060/Bricks060_SQ_Color.jpg?49804",
+    "sourceFile": "Bricks060_SQ_Color.jpg",
+    "sha256": "fe6dd4f9c4178f7f296147804fb108a2b372ebdd19b8c4008b84fc7e91cb3367",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "license": "CC0-1.0",
+    "author": "ambientCG / Lennart Demes",
+    "modifications": "Official CC0 tiling-preview color map resized to 1024 px JPEG. The app derives a 512 px neutral-luminance PNG for tinting.",
+    "sourceSha256": "90b263ec2c407dc20ce67dd5d81ad5381d3f14daf52053c71268a53ef95dc8ee"
+  }
+]

@@ -23,6 +23,10 @@ import {
   MaterialRole,
   preset,
   validateProject,
+  BIOMES,
+  Biome,
+  Project,
+  applyTheme,
 } from "../core/project";
 import { bounds } from "../core/geometry";
 import { download } from "../core/package";
@@ -38,29 +42,37 @@ export function Explorer() {
         <Folder size={16} />
         {s.project.name}
       </div>
-      {(["structure", "windows", "roof", "interior", "site"] as const).map(
-        (cat) => (
-          <details open={cat === "structure" || cat === "interior"} key={cat}>
-            <summary>
-              <Layers3 size={14} />
-              {cat}
-              <span>{s.meshes.filter((m) => m.category === cat).length}</span>
-            </summary>
-            {s.meshes
-              .filter((m) => m.category === cat)
-              .map((m) => (
-                <button
-                  className={`tree-item ${s.selected === m.id ? "selected" : ""}`}
-                  key={m.id}
-                  onClick={() => s.select(m.id)}
-                >
-                  <Box size={12} />
-                  <span>{m.label}</span>
-                </button>
-              ))}
-          </details>
-        ),
-      )}
+      {(
+        [
+          "structure",
+          "windows",
+          "roof",
+          "interior",
+          "site",
+          "vegetation",
+          "landscape",
+        ] as const
+      ).map((cat) => (
+        <details open={cat === "structure" || cat === "interior"} key={cat}>
+          <summary>
+            <Layers3 size={14} />
+            {cat}
+            <span>{s.meshes.filter((m) => m.category === cat).length}</span>
+          </summary>
+          {s.meshes
+            .filter((m) => m.category === cat)
+            .map((m) => (
+              <button
+                className={`tree-item ${s.selected === m.id ? "selected" : ""}`}
+                key={m.id}
+                onClick={() => s.select(m.id)}
+              >
+                <Box size={12} />
+                <span>{m.label}</span>
+              </button>
+            ))}
+        </details>
+      ))}
       <div className="panel-note">
         Select pieces here or directly in the 3D view. Drag pane tabs to
         rearrange the workspace.
@@ -131,7 +143,7 @@ export function Properties() {
   return (
     <div className="panel-pad properties">
       <div className="panel-eyebrow">
-        BUILDING RECIPE <span>v0.1</span>
+        BUILDING RECIPE <span>v0.2</span>
       </div>
       <label className="field">
         Project name
@@ -218,7 +230,7 @@ export function Properties() {
       )}
       <div className="form-section">Generation</div>
       <label className="field">
-        Material seed
+        World seed
         <input
           type="number"
           value={p.seed}
@@ -237,7 +249,7 @@ export function Properties() {
           s.update({ seed: Math.floor(Math.random() * 2147483647) })
         }
       >
-        <RotateCcw size={13} /> New material variation
+        <RotateCcw size={13} /> Generate another variation
       </button>
       {selected && (
         <>
@@ -256,8 +268,9 @@ export function Properties() {
         </>
       )}
       <div className="panel-note">
-        One-storey foundation recipes. Multi-room layouts, storeys, full theme
-        kits, and city generation follow the recorded roadmap.
+        Architecture, biome, and plant controls live in the Themes and Plant
+        Studio panes. Roof cutaway reveals the interior. Multi-storey editing
+        remains on the roadmap.
       </div>
     </div>
   );
@@ -279,13 +292,13 @@ export function Presets() {
             type: "house",
             icon: Home,
             title: "Garden house",
-            text: "A simple home with a gable roof and furniture.",
+            text: "A home with a bedroom partition, furnished living space and a theme-specific exterior.",
           },
           {
             type: "villa",
             icon: Square,
-            title: "Studio villa",
-            text: "A larger single-room shell. Wings arrive later.",
+            title: "Garden villa",
+            text: "A larger home with a terrace, pergola and distinct living and sleeping spaces.",
           },
         ] as const
       ).map(({ type, icon: Icon, title, text }) => (
@@ -307,12 +320,12 @@ export function Presets() {
           <ArrowUpRight size={16} />
         </button>
       ))}
-      <div className="form-section">World palette</div>
+      <div className="form-section">World theme</div>
       <div className="theme-picker">
         {Object.entries(THEMES).map(([id, t]) => (
           <button
             key={id}
-            onClick={() => s.update({ theme: id as Theme })}
+            onClick={() => s.update(applyTheme(s.project, id as Theme))}
             className={s.project.theme === id ? "selected" : ""}
           >
             <i style={{ background: t.palette.wall }} />
@@ -322,9 +335,8 @@ export function Presets() {
         ))}
       </div>
       <div className="panel-note">
-        <Trees size={15} /> These are material palettes today. Complete
-        biome-specific buildings, terrain, and vegetation are planned
-        milestones.
+        <Trees size={15} /> Each theme applies an architectural kit and matching
+        biome. Open Themes to mix architecture and environment independently.
       </div>
     </div>
   );
@@ -354,6 +366,25 @@ export function Materials() {
   return (
     <div className="panel-pad">
       <div className="panel-eyebrow">SURFACE LIBRARY</div>
+      <label className="field">
+        Default surfaces
+        <select
+          value={s.project.surfaceSource}
+          onChange={(e) =>
+            s.update({
+              surfaceSource: e.target.value as "standard" | "procedural",
+            })
+          }
+        >
+          <option value="standard">CC0 library + procedural detail</option>
+          <option value="procedural">Fully procedural</option>
+        </select>
+      </label>
+      <p className="muted small">
+        {s.project.surfaceSource === "standard"
+          ? s.assetStatus
+          : "Deterministic patterns from your world seed"}
+      </p>
       <div className="material-grid">
         {(Object.keys(specs) as MaterialRole[]).map((r) => (
           <button
@@ -386,7 +417,9 @@ export function Materials() {
       <p className="muted small">
         {s.project.textures[role]
           ? s.project.textures[role]!.name
-          : "Original seeded procedural pattern"}
+          : s.project.surfaceSource === "standard"
+            ? "CC0 library / generated surface"
+            : "Original seeded procedural pattern"}
       </p>
       <label className="small-button upload-button">
         <Upload size={14} />
@@ -407,7 +440,7 @@ export function Materials() {
             s.update({ textures });
           }}
         >
-          Restore procedural material
+          Restore default material
         </button>
       )}
       <div className="panel-note">
@@ -438,7 +471,9 @@ export function FloorPlan() {
             (m) =>
               m.category !== "roof" &&
               m.id !== "site-ground" &&
-              m.id !== "shop-sign",
+              m.id !== "shop-sign" &&
+              m.category !== "vegetation" &&
+              m.category !== "landscape",
           )
           .map((m) => {
             const b = bounds(m),
@@ -641,6 +676,225 @@ export function Diagnostics() {
       <div>
         <span className="log-time">NOW</span>
         {s.notice}
+      </div>
+    </div>
+  );
+}
+
+const THEME_DETAILS: Record<Theme, string> = {
+  temperate: "Brick shopfronts, fabric awnings, broadleaf trees and conifers.",
+  desert:
+    "Light plaster, parapets, shaded terraces and sparse arid vegetation.",
+  jungle:
+    "Raised timber verandas, deep rain canopies, palms, buttress trees and ferns.",
+  fantasy:
+    "Exposed timber, steep gables, stone chimneys, old woodland and fungi.",
+  scifi:
+    "Habitat frames, service modules, entry canopies and alien fan plants.",
+};
+export function ThemesPanel() {
+  const s = useStudio(),
+    p = s.project;
+  return (
+    <div className="panel-pad themes-panel">
+      <div className="panel-eyebrow">WORLD THEMES</div>
+      <p className="muted small">
+        Architecture, plants and ground designed together. Select a scene, then
+        mix its components below.
+      </p>
+      {(Object.entries(THEMES) as [Theme, (typeof THEMES)[Theme]][]).map(
+        ([id, t]) => (
+          <button
+            key={id}
+            className={`world-theme-card ${p.theme === id ? "selected" : ""}`}
+            onClick={() => {
+              s.update(applyTheme(p, id));
+              s.notify(
+                `${t.label} architecture and biome applied. Uploaded textures are preserved.`,
+              );
+            }}
+          >
+            <img
+              src={`${import.meta.env.BASE_URL}scenes/c3-${id}.png`}
+              alt={`${t.label} generated building and vegetation`}
+              loading="lazy"
+            />
+            <span>
+              <b>{t.label}</b>
+              <small>{THEME_DETAILS[id]}</small>
+            </span>
+          </button>
+        ),
+      )}
+      <div className="form-section">Mix architecture & environment</div>
+      <label className="field">
+        Architecture
+        <select
+          value={p.theme}
+          onChange={(e) => s.update({ theme: e.target.value as Theme })}
+        >
+          {Object.entries(THEMES).map(([id, t]) => (
+            <option key={id} value={id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        Biome
+        <select
+          value={p.biome}
+          onChange={(e) => s.update({ biome: e.target.value as Biome })}
+        >
+          {Object.entries(BIOMES).map(([id, b]) => (
+            <option key={id} value={id}>
+              {b.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted small">{BIOMES[p.biome].description}</p>
+      <label className="check-field">
+        <input
+          type="checkbox"
+          checked={p.architectureDetails}
+          onChange={(e) => s.update({ architectureDetails: e.target.checked })}
+        />{" "}
+        Architectural details
+      </label>
+      <label className="check-field">
+        <input
+          type="checkbox"
+          checked={p.landscape.enabled}
+          onChange={(e) =>
+            s.update({
+              landscape: { ...p.landscape, enabled: e.target.checked },
+            })
+          }
+        />{" "}
+        Surrounding landscape
+      </label>
+      <Range
+        label="Parcel margin"
+        value={p.landscape.extent}
+        min={6}
+        max={18}
+        step={1}
+        onChange={(extent) =>
+          s.update({ landscape: { ...p.landscape, extent } })
+        }
+      />
+      <Range
+        label="Ground relief"
+        value={p.landscape.relief}
+        min={0}
+        max={2}
+        step={0.1}
+        onChange={(relief) =>
+          s.update({ landscape: { ...p.landscape, relief } })
+        }
+      />
+      {p.biome === "arid" && (
+        <label className="field">
+          Desert ecology
+          <select
+            value={p.landscape.aridRecipe}
+            onChange={(e) =>
+              s.update({
+                landscape: {
+                  ...p.landscape,
+                  aridRecipe: e.target
+                    .value as Project["landscape"]["aridRecipe"],
+                },
+              })
+            }
+          >
+            <option value="scrub">Dry scrub & acacia</option>
+            <option value="succulent">Succulent desert</option>
+            <option value="oasis">Oasis vegetation</option>
+          </select>
+        </label>
+      )}
+      <div className="panel-note">
+        Your building dimensions, interior settings and uploaded surfaces
+        survive theme changes. The same generated geometry is included in the
+        RWX package.
+      </div>
+    </div>
+  );
+}
+export function PlantStudio() {
+  const s = useStudio(),
+    p = s.project,
+    plants = s.meshes.filter((m) => m.category === "vegetation");
+  const families = new Map<string, number>();
+  for (const m of plants) {
+    const family = m.label.split(" · ")[0];
+    families.set(family, (families.get(family) ?? 0) + m.indices.length / 3);
+  }
+  return (
+    <div className="panel-pad">
+      <div className="panel-eyebrow">PLANT STUDIO</div>
+      <h3>{BIOMES[p.biome].label}</h3>
+      <p className="muted small">
+        {BIOMES[p.biome].description} Real mesh leaves and branches, generated
+        from your world seed.
+      </p>
+      <Range
+        label="Vegetation density"
+        value={p.landscape.density * 100}
+        min={0}
+        max={100}
+        step={5}
+        unit="%"
+        onChange={(density) =>
+          s.update({ landscape: { ...p.landscape, density: density / 100 } })
+        }
+      />
+      <Range
+        label="Plant growth scale"
+        value={p.landscape.plantScale}
+        min={0.6}
+        max={1.5}
+        step={0.05}
+        unit="×"
+        onChange={(plantScale) =>
+          s.update({ landscape: { ...p.landscape, plantScale } })
+        }
+      />
+      <label className="check-field">
+        <input
+          type="checkbox"
+          checked={p.landscape.foliage}
+          onChange={(e) =>
+            s.update({
+              landscape: { ...p.landscape, foliage: e.target.checked },
+            })
+          }
+        />{" "}
+        Show leaves and fronds
+      </label>
+      <p className="muted small">
+        Hide foliage to inspect root, trunk and branch connections. This setting
+        also affects the exported package.
+      </p>
+      <div className="form-section">Generated families</div>
+      {[...families].map(([family, triangles]) => (
+        <div className="plant-family-row" key={family}>
+          <Trees size={16} />
+          <span>{family.replaceAll("-", " ")}</span>
+          <b>{triangles.toLocaleString()} tris</b>
+        </div>
+      ))}
+      <div className="panel-note">
+        {plants.reduce((n, m) => n + m.indices.length / 3, 0).toLocaleString()}{" "}
+        plant triangles · {plants.length} mesh pieces. Foliage is nonsolid; main
+        trunks retain collision. Entrances and approach paths have placement
+        exclusions.
+      </div>
+      <div className="panel-note">
+        Pruning, editable branch graphs and custom species recipes are later
+        Plant Studio steps.
       </div>
     </div>
   );

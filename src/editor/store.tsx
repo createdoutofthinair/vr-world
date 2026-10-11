@@ -13,8 +13,10 @@ import {
   MeshData,
   Project,
   validateProject,
+  applyTheme,
 } from "../core/project";
 import { createPackage, ExportBundle } from "../core/package";
+import { loadStandardTextures } from "../core/standard-textures";
 interface History {
   past: Project[];
   present: Project;
@@ -43,12 +45,16 @@ interface StudioStore {
   notice: string;
   notify: (message: string) => void;
   saveState: string;
+  assetRevision: number;
+  assetStatus: string;
 }
 const Context = createContext<StudioStore | null>(null);
 function initial(): Project {
   let p = structuredClone(DEFAULT_PROJECT);
   try {
-    const s = localStorage.getItem("c3-project-v1");
+    const s =
+      localStorage.getItem("c3-project-v2") ??
+      localStorage.getItem("c3-project-v1");
     if (s) p = validateProject(JSON.parse(s));
   } catch {}
   const theme = new URLSearchParams(location.hash.split("?")[1] ?? "").get(
@@ -58,7 +64,7 @@ function initial(): Project {
     theme &&
     ["temperate", "desert", "jungle", "fantasy", "scifi"].includes(theme)
   )
-    p.theme = theme as Project["theme"];
+    p = { ...p, ...applyTheme(p, theme as Project["theme"]) };
   return p;
 }
 export function StudioProvider({ children }: { children: ReactNode }) {
@@ -68,7 +74,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       future: [],
     })),
     [selected, select] = useState<string | null>(null),
-    [cutaway, setCutaway] = useState(true),
+    [cutaway, setCutaway] = useState(false),
     [mode, setMode] = useState<"orbit" | "walk">("orbit"),
     [view, setView] = useState<"authoring" | "export">("authoring"),
     [bundle, setBundle] = useState<ExportBundle | null>(null),
@@ -76,14 +82,35 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     [notice, notify] = useState(
       "Ready. Start with a preset or make it your own.",
     ),
-    [saveState, setSaveState] = useState("Saved locally");
+    [saveState, setSaveState] = useState("Saved locally"),
+    [assetRevision, setAssetRevision] = useState(0),
+    [assetStatus, setAssetStatus] = useState("Loading standard textures…");
+  useEffect(() => {
+    let active = true;
+    loadStandardTextures()
+      .then(() => {
+        if (active) {
+          setAssetRevision((v) => v + 1);
+          setAssetStatus("CC0 standard textures ready");
+        }
+      })
+      .catch(() => {
+        if (active)
+          setAssetStatus(
+            "Standard textures unavailable. Reload or choose procedural surfaces.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const project = history.present,
     meshes = useMemo(() => buildScene(project), [project]);
   const latest = useRef(project);
   latest.current = project;
   useEffect(() => {
     try {
-      localStorage.setItem("c3-project-v1", JSON.stringify(project));
+      localStorage.setItem("c3-project-v2", JSON.stringify(project));
       setSaveState("Saved locally");
     } catch {
       setSaveState("Autosave unavailable · download your project");
@@ -103,7 +130,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       notify((e as Error).message);
     }
   };
-  const update = (patch: Partial<Project>) => replace({ ...project, ...patch });
+  const update = (patch: Partial<Project>) =>
+    replace({ ...latest.current, ...patch });
   const undo = () => {
     setHistory((h) =>
       h.past.length
@@ -178,6 +206,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         notice,
         notify,
         saveState,
+        assetRevision,
+        assetStatus,
       }}
     >
       {children}

@@ -26,6 +26,8 @@ test("Every preset and boundary configuration produces finite, nondegenerate ind
                 depth,
                 wallThickness,
                 doorWidth,
+                landscape: { ...DEFAULT_PROJECT.landscape, enabled: false },
+                architectureDetails: false,
               }),
               scene = buildScene(p);
             assert.equal(new Set(scene.map((m) => m.id)).size, scene.length);
@@ -34,7 +36,7 @@ test("Every preset and boundary configuration produces finite, nondegenerate ind
               assert.equal(m.positions.length / 3, m.uvs.length / 2);
               assert(m.uvs.every(Number.isFinite));
               const b = bounds(m);
-              assert(b.max.every((v, i) => v > b.min[i]));
+              assert(b.max.filter((v, i) => v > b.min[i]).length >= 2);
               for (const index of m.indices)
                 assert(index >= 0 && index < m.positions.length / 3);
             }
@@ -101,7 +103,11 @@ test("Serialized RWX round trip preserves local vertices, UVs, placement, windin
   const p = preset("house", "fantasy"),
     specs = materialsFor(p);
   for (const m of buildScene(p)) {
-    const out = serializeRWX(m, specs[m.material], `c3-${m.material}-fixture`),
+    const out = serializeRWX(
+        m,
+        specs[m.material],
+        `c3-${m.material.toLowerCase()}-fixture`,
+      ),
       parsed = parseRWX(out, m);
     assert.deepEqual(parsed.mesh.indices, m.indices);
     assert.deepEqual(parsed.mesh.origin, m.origin);

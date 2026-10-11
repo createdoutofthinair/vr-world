@@ -30,6 +30,8 @@ import {
   FloorPlan,
   ExportPanel,
   Diagnostics,
+  ThemesPanel,
+  PlantStudio,
 } from "./Panels";
 import { Viewport } from "./Viewport";
 import { download } from "../core/package";
@@ -42,6 +44,8 @@ const components = {
   export: ExportPanel,
   diagnostics: Diagnostics,
   viewport: Viewport,
+  themes: ThemesPanel,
+  plants: PlantStudio,
 };
 const panelNames: Record<string, string> = {
   explorer: "Explorer",
@@ -52,6 +56,8 @@ const panelNames: Record<string, string> = {
   export: "Export package",
   diagnostics: "Problems & activity",
   viewport: "3D workspace",
+  themes: "Themes & landscape",
+  plants: "Plant Studio",
 };
 function defaultLayout(api: DockviewApi) {
   api.clear();
@@ -119,7 +125,14 @@ function defaultLayout(api: DockviewApi) {
     position: { referencePanel: "viewport", direction: "below" },
     initialHeight: 138,
   });
-  api.getPanel("explorer")?.api.setActive();
+  for (const id of ["themes", "plants"])
+    api.addPanel({
+      id,
+      component: id,
+      title: panelNames[id],
+      position: { referencePanel: "explorer", direction: "within" },
+    });
+  api.getPanel("themes")?.api.setActive();
   api.getPanel("properties")?.api.setActive();
   api.getPanel("viewport")?.api.setActive();
 }
@@ -133,7 +146,7 @@ function EditorInner() {
   const ready = ({ api: a }: DockviewReadyEvent) => {
     api.current = a;
     const key =
-      window.innerWidth < 760 ? "c3-layout-v1-narrow" : "c3-layout-v1";
+      window.innerWidth < 760 ? "c3-layout-v2-narrow" : "c3-layout-v2";
     let restored = false;
     try {
       const saved = localStorage.getItem(key);
@@ -218,7 +231,7 @@ function EditorInner() {
         <div className="project-title">
           <FolderOpen size={14} />
           {s.project.name}
-          <span className="early-tag">FOUNDATION</span>
+          <span className="early-tag">WORLD KITS</span>
         </div>
         <div className="editor-header-right">
           <button
@@ -282,6 +295,9 @@ function EditorInner() {
             }}
           >
             <Box size={14} /> Presets
+          </button>
+          <button onClick={() => open("themes")}>
+            <Box size={14} /> Worlds
           </button>
           <button onClick={() => open("properties")}>
             <Settings2 size={14} /> Configure

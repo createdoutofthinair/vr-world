@@ -3,20 +3,17 @@ import assert from "node:assert/strict";
 import JSZip from "jszip";
 import { createPackage, readProducedPackage } from "../src/core/package";
 import { buildScene, bounds } from "../src/core/geometry";
-import { DEFAULT_PROJECT, Project, MaterialRole } from "../src/core/project";
+import {
+  DEFAULT_PROJECT,
+  Project,
+  MaterialRole,
+  MATERIAL_ROLES,
+} from "../src/core/project";
 const pixel =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6zqkAAAAASUVORK5CYII=";
 function fixture(): Project {
   const p = structuredClone(DEFAULT_PROJECT);
-  for (const role of [
-    "wall",
-    "floor",
-    "roof",
-    "trim",
-    "glass",
-    "ground",
-    "sign",
-  ] as MaterialRole[])
+  for (const role of MATERIAL_ROLES)
     p.textures[role] = {
       name: "fixture.png",
       dataUrl: pixel,
