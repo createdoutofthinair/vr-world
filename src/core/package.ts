@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { serializeGLB } from "./glb";
 import { checkZipBudget } from "./zip-budget";
 import {
   materialsFor,
@@ -96,6 +97,7 @@ export interface ExportSettings {
   selected?: string[];
   groupBudget?: GroupBudget;
   rejectOversize?: boolean;
+  includeGLB?: boolean;
 }
 export interface PackageOptions extends ExportSettings {
   previewMode?: "canonical" | "awg-probe";
@@ -255,6 +257,13 @@ export async function createPackage(
       surfaceMesh: mesh.surfaceMesh,
       action: mesh.action ?? `create solid ${mesh.solid ? "on" : "off"}`,
     });
+  }
+  if (options.includeGLB) {
+    options.progress?.("Embedding secondary GLB materials", 60);
+    const diffuse: Record<string, string> = {};
+    for (const part of meshes)
+      diffuse[part.id] = part.bakedTexture?.dataUrl ?? images[part.material];
+    zip.file("c3-world.glb", serializeGLB(project, meshes, diffuse));
   }
   const levels = [
     ...new Set(

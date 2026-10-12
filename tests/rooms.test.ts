@@ -103,8 +103,8 @@ test("Schema 3 migration preserves authored settings while pinning the new room 
   p.rooms = regenerateRooms(p);
   const legacy = { ...p, schemaVersion: 3, generatorVersion: "0.3.0" };
   const migrated = validateProject(legacy);
-  assert.equal(migrated.schemaVersion, 4);
-  assert.equal(migrated.generatorVersion, "0.4.0");
+  assert.equal(migrated.schemaVersion, 5);
+  assert.equal(migrated.generatorVersion, "0.5.0");
   assert.equal(migrated.migratedFrom, "0.3.0");
   assert.deepEqual(migrated.rooms, p.rooms);
   assert.deepEqual(migrated.plants, p.plants);

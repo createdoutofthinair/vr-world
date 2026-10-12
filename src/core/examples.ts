@@ -1,6 +1,12 @@
 import { Project, preset } from "./project";
 export const REFERENCE_EXAMPLES = [
   {
+    id: "viaduct-city",
+    title: "A city on two levels",
+    caption:
+      "Graded elevated roads, grounded piers, usable pavements and clear underpasses.",
+  },
+  {
     id: "city-temperate",
     title: "A complete neighborhood",
     caption: "Seeded building plots, parks, pavements, roads and crossings.",
@@ -18,6 +24,17 @@ export const REFERENCE_EXAMPLES = [
   },
 ] as const;
 export function referenceExample(id: string | null): Project | null {
+  if (id === "viaduct-city") {
+    const p = preset("mixed");
+    p.name = "Viaduct neighborhood reference";
+    p.world.enabled = true;
+    p.world.blocks = 3;
+    p.world.parkRatio = 0.4;
+    p.landscape.density = 0.3;
+    p.plants.quality = "economy";
+    p.effects.viaduct = true;
+    return p;
+  }
   if (id === "city-temperate") {
     const p = preset("mixed");
     p.name = "Neighborhood reference";

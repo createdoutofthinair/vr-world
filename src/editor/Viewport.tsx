@@ -1,3 +1,4 @@
+import { textureAlpha } from "../core/texture-alpha";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -361,7 +362,9 @@ export function Viewport() {
         camera.getWorldDirection(forward);
         if (state.mode !== "fly") forward.y = 0;
         forward.normalize();
-        const right = new THREE.Vector3().crossVectors(forward, camera.up);
+        const right = new THREE.Vector3()
+          .crossVectors(forward, camera.up)
+          .normalize();
         let f =
             (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) -
             (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0),
@@ -520,14 +523,17 @@ export function Viewport() {
         );
         if (!part.bakedTexture && !part.textureRef?.startsWith("c3-terrain-"))
           texture.repeat.set(1 / (spec.scale ?? 1), 1 / (spec.scale ?? 1));
+        const alpha = textureAlpha(data),
+          transparent = spec.opacity < 1 || alpha === "blend";
         mat = new THREE.MeshStandardMaterial({
           color: part.materialColor ?? spec.color,
           map: texture,
           roughness: exported ? 0.84 : (spec.roughness ?? 0.84),
           metalness: exported ? 0 : (spec.metalness ?? 0),
-          transparent: spec.opacity < 1,
+          transparent,
+          alphaTest: alpha === "mask" ? 0.5 : alpha === "blend" ? 0.01 : 0,
           opacity: spec.opacity,
-          depthWrite: spec.opacity >= 1,
+          depthWrite: !transparent,
         });
         const maps = !exported
           ? s.renderProject.materialMaps[part.material]
@@ -568,7 +574,7 @@ export function Viewport() {
         geometryCache.set(shape, g);
       }
       if (
-        spec.opacity >= 1 &&
+        !mat.transparent &&
         !part.doorId &&
         !/\b(move|rotate|visible|name)\b/i.test(part.action ?? "")
       ) {
@@ -632,7 +638,6 @@ export function Viewport() {
     s.cutaway,
     s.inspectionLevel,
     s.mode,
-    s.project,
     contextRevision,
     s.assetRevision,
     s.renderProject,

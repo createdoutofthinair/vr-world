@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import JSZip from "jszip";
 import { createPackage, readProducedPackage } from "../src/core/package";
-import { buildScene, bounds } from "../src/core/geometry";
+import { buildScene, bounds, moveWalker } from "../src/core/geometry";
 import {
   DEFAULT_PROJECT,
   Project,
@@ -173,4 +173,44 @@ test("Serialized named actions keep the source collision state while controlling
   );
   assert.equal(rebuilt.meshes[0].solid, true);
   assert.equal(rebuilt.meshes[1].solid, false);
+});
+test("Emitted viaduct package retains deck surfaces, grounded supports and walking after RWX reconstruction", async () => {
+  const p = fixture();
+  p.world.enabled = true;
+  p.world.blocks = 3;
+  p.effects.viaduct = true;
+  p.landscape.density = 0;
+  const source = buildScene(p, false).filter((m) =>
+      m.id.startsWith("viaduct-"),
+    ),
+    bundle = await createPackage(p, {
+      scope: "selected",
+      selected: source.map((m) => m.id),
+    });
+  assert.equal(bundle.meshes.length, source.length);
+  for (const part of bundle.meshes) {
+    const original = source.find((m) => m.id === part.id)!;
+    assert.equal(part.surfaceMesh, original.surfaceMesh);
+    const a = bounds(original),
+      b = bounds(part);
+    for (let k = 0; k < 3; k++) {
+      assert(Math.abs(a.min[k] - b.min[k]) < 1e-5);
+      assert(Math.abs(a.max[k] - b.max[k]) < 1e-5);
+    }
+  }
+  const { viaductPlan } = await import("../src/core/viaduct");
+  const plan = viaductPlan(p)!;
+  const z = plan.z + p.world.roadWidth / 2 + p.world.sidewalkWidth / 2;
+  const start: [number, number, number] = [
+    plan.x0 + 0.1,
+    plan.heightAt(plan.x0 + 0.1) + 0.125 + 1.68,
+    z,
+  ];
+  const end = moveWalker(start, [plan.x1 - plan.x0 - 0.2, 0], bundle.meshes);
+  assert(
+    Math.abs(end[0] - (plan.x1 - 0.1)) < 0.1,
+    `Emitted ramp blocks walking: ${end}`,
+  );
+  assert(Math.abs(end[1] - (plan.heightAt(end[0]) + 0.125 + 1.68)) < 0.1);
+  assert(bundle.files.some((f) => f.includes("c3-metal-")));
 });

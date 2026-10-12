@@ -10,8 +10,9 @@ import {
   materialsFor,
 } from "./project";
 import { box } from "./mesh";
-import { generatePlant } from "./plants";
-import { terrainMeshes, channelX } from "./terrain";
+import { plantVariant } from "./landscape";
+import { viaductPlan } from "./viaduct";
+import { terrainMeshes, terrainHeight, channelX } from "./terrain";
 export interface Plot {
   id: string;
   x: number;
@@ -149,7 +150,8 @@ export function buildCity(
   const plan = cityPlan(p),
     parts: MeshData[] = [],
     road = p.world.roadWidth / 2,
-    walk = p.world.sidewalkWidth;
+    walk = p.world.sidewalkWidth,
+    viaduct = viaductPlan(p);
   const add = (
     id: string,
     label: string,
@@ -285,43 +287,65 @@ export function buildCity(
   }
   for (const plot of plan.plots) {
     if (plot.park) {
-      add(
-        `${plot.id}-park`,
-        "Pocket park",
-        [plot.x, -0.02, plot.z],
-        [p.world.blockSize * 0.42, 0.05, p.world.blockSize * 0.42],
-        "grass",
-        true,
-        true,
-      );
-      const rng = random(plot.seed);
-      for (let k = 0; k < 4; k++) {
-        const plant = generatePlant(
-          p.biome === "tropical"
-            ? "palm"
-            : p.biome === "arid"
-              ? "acacia"
-              : p.biome === "alien"
-                ? "alien"
-                : "broadleaf",
-          seedFor(plot.seed, `park-${k}`),
-          0.8,
-          p.plants,
+      const riparian =
+        p.effects.creek && Math.abs(plot.x - channelX(p, plot.z)) < 8.5;
+      if (!riparian)
+        add(
+          `${plot.id}-park`,
+          "Pocket park",
+          [plot.x, -0.02, plot.z],
+          [p.world.blockSize * 0.42, 0.05, p.world.blockSize * 0.42],
+          "grass",
+          true,
+          true,
         );
+      const rng = random(plot.seed);
+      for (let k = 0; k < Math.round(p.landscape.density * 6); k++) {
+        const family =
+          p.biome === "tropical"
+            ? k % 2
+              ? "palm"
+              : "canopy"
+            : p.biome === "arid"
+              ? p.landscape.aridRecipe === "oasis" && k % 2
+                ? "palm"
+                : "acacia"
+              : p.biome === "alien"
+                ? k % 2
+                  ? "spiral"
+                  : "alien"
+                : p.biome === "woodland"
+                  ? k % 2
+                    ? "drooping"
+                    : "ancient"
+                  : "broadleaf";
         const x = plot.x + (rng() - 0.5) * 8,
           z = plot.z + (rng() - 0.5) * 8;
         if (
+          (p.effects.creek && Math.abs(x - channelX(p, z)) < 4.5) ||
+          (viaduct &&
+            Math.abs(z - viaduct.z) <
+              p.world.roadWidth / 2 + p.world.sidewalkWidth + 3) ||
           p.plantLandmarks.some(
             (pin) => Math.hypot(pin.x - x, pin.z - z) < 3 * pin.scale,
           )
         )
           continue;
-        for (const m of plant.meshes)
+        const plant = plantVariant(
+          family,
+          seedFor(0, `${family}-park-variant-${(plot.seed + k) % 3}`),
+          0.8,
+          p.plants,
+        );
+        for (const m of plant.meshes) {
+          if (!p.landscape.foliage && ["leaves", "leaf-tips"].includes(m.id))
+            continue;
           parts.push({
             ...m,
             id: `${plot.id}-plant-${k}-${m.id}`,
-            origin: [x, 0.03, z],
+            origin: [x, riparian ? terrainHeight(p, x, z) : 0.03, z],
           });
+        }
       }
       continue;
     }
@@ -391,5 +415,12 @@ export function buildCity(
       true,
     );
   }
-  return parts;
+  return viaduct
+    ? parts.filter(
+        (m) =>
+          !m.id.includes("lamp-") ||
+          Math.abs(m.origin[2] - viaduct.z) >
+            p.world.roadWidth / 2 + p.world.sidewalkWidth + 0.5,
+      )
+    : parts;
 }

@@ -8,6 +8,7 @@ import {
   MaterialRole,
 } from "./project";
 import { MeshBuilder } from "./mesh";
+import { viaductPlan, ViaductPlan } from "./viaduct";
 import { cityPlan, CityPlan } from "./city";
 import { decodePNG, encodePNG, dataURL, PixelImage } from "./png";
 import { standardImage } from "./standard-textures";
@@ -94,6 +95,7 @@ function infrastructureMask(
   x: number,
   z: number,
   city?: CityPlan,
+  viaduct?: ViaductPlan | null,
 ): number {
   if (p.world.enabled) {
     const plan = city ?? cityPlan(p),
@@ -111,10 +113,21 @@ function infrastructureMask(
         Math.min(roadX, roadZ) - p.world.roadWidth / 2 - p.world.sidewalkWidth;
     let mask = smooth(distance / 3);
     for (const plot of plan.plots) {
-      if (plot.park) continue;
+      if (
+        plot.park &&
+        p.effects.creek &&
+        Math.abs(plot.x - channelX(p, plot.z)) < 8.5
+      )
+        continue;
       const edge = Math.max(Math.abs(x - plot.x) - 8, Math.abs(z - plot.z) - 9);
       mask = Math.min(mask, smooth(edge / 2));
     }
+    if (viaduct)
+      for (const sx of viaduct.supports)
+        mask = Math.min(
+          mask,
+          smooth((Math.hypot(x - sx, z - viaduct.z) - 1) / 2),
+        );
     return mask;
   }
   const edge = Math.max(
@@ -145,7 +158,8 @@ export function terrainField(p: Project): TerrainField {
     ]);
   const cached = fields.get(key);
   if (cached) return cached;
-  const city = p.world.enabled ? cityPlan(p) : undefined;
+  const city = p.world.enabled ? cityPlan(p) : undefined,
+    viaduct = viaductPlan(p);
   const nx = Math.ceil(width),
     nz = Math.ceil(depth),
     heights = new Float64Array((nx + 1) * (nz + 1)),
@@ -216,7 +230,8 @@ export function terrainField(p: Project): TerrainField {
         zz = -depth / 2 + (z * depth) / nz;
       heights[i] =
         -0.02 +
-        (heights[i] + erosion[i] + 0.02) * infrastructureMask(p, xx, zz, city);
+        (heights[i] + erosion[i] + 0.02) *
+          infrastructureMask(p, xx, zz, city, viaduct);
       if (p.effects.creek) {
         const distance = Math.abs(xx - channelX(p, zz));
         if (distance < 3.3) {

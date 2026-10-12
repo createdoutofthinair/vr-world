@@ -141,13 +141,16 @@ export function buildEffects(p: Project): MeshData[] {
           0.45,
           p.plants,
         );
-      for (const m of plant.meshes)
+      for (const m of plant.meshes) {
+        if (!p.landscape.foliage && ["leaves", "leaf-tips"].includes(m.id))
+          continue;
         parts.push({
           ...m,
           id: `bank-${i}-${side}-${m.id}`,
           origin: [x, terrainHeight(p, x, z), z],
           solid: false,
         });
+      }
     }
   if (p.effects.waterfall) {
     const fall = -p.depth / 2 - 3,

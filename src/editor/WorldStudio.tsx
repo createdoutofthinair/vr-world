@@ -25,6 +25,7 @@ export function WorldStudio() {
           ["roadWidth", "Road width", 4, 10, 0.5],
           ["sidewalkWidth", "Sidewalk width", 1.2, 3, 0.1],
           ["parkRatio", "Pocket park ratio", 0, 0.6, 0.05],
+          ["viaductHeight", "Viaduct deck height", 2.5, 5, 0.1],
         ] as const
       ).map(([key, label, min, max, step]) => (
         <label className="field" key={key}>

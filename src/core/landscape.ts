@@ -15,7 +15,7 @@ export function parcelSize(p: Project): [number, number] {
   return [p.width + 2 * p.landscape.extent, p.depth + 2 * p.landscape.extent];
 }
 const plantCache = new Map<string, PlantResult>();
-function plantVariant(
+export function plantVariant(
   family: PlantFamily,
   seed: number,
   scale: number,

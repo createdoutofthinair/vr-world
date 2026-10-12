@@ -71,3 +71,31 @@ test("Pavement junctions meet their strips without overlapping plates; street ro
   const crossings = scene.filter((m) => m.id.includes("-crossing-"));
   assert.equal(crossings.length, 40);
 });
+test("Parks respect density and foliage; creek parks preserve the carved channel", () => {
+  const p = preset("house", "jungle");
+  p.world.enabled = true;
+  p.world.blocks = 1;
+  p.world.parkRatio = 0.6;
+  for (const plot of cityPlan(p).plots)
+    p.world.locks[plot.id] = { ...plot, park: true };
+  p.landscape.density = 0;
+  assert(!buildScene(p, false).some((m) => m.id.includes("-plant-")));
+  p.landscape.density = 0.5;
+  p.landscape.foliage = false;
+  const scene = buildScene(p, false);
+  assert(scene.some((m) => m.id.includes("-plant-")));
+  assert(
+    !scene.some(
+      (m) => m.id.includes("-plant-") && /leaves|leaf-tips/.test(m.id),
+    ),
+  );
+  p.effects.creek = true;
+  p.world.blocks = 3;
+  p.world.locks = {};
+  const river = cityPlan(p).plots.filter(
+      (plot) => plot.park && Math.abs(plot.x) < 8.5,
+    ),
+    wet = buildScene(p, false);
+  for (const plot of river)
+    assert(!wet.some((m) => m.id === `${plot.id}-park`));
+});

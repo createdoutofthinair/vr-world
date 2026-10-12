@@ -2,6 +2,7 @@ import { MeshData, Project, Vec3 } from "./project";
 import { buildLandscape } from "./landscape";
 import { decorateBuilding } from "./architecture";
 import { buildBuilding } from "./building";
+import { buildViaduct } from "./viaduct";
 import { buildCity } from "./city";
 import { bakeTerrain } from "./terrain";
 import { buildMassing } from "./massing";
@@ -35,6 +36,7 @@ export function buildScene(p: Project, bake = true): MeshData[] {
     ...buildModules(p),
     ...(p.world.enabled ? [] : buildSigns(p)),
     ...buildEffects(p),
+    ...buildViaduct(p),
   ];
   validateRoomAccess(p, parts);
   parts.push(...buildLandmarks(p, parts));
@@ -633,7 +635,11 @@ export function canStand(
   const feet = eyeY - eyeHeight + 0.04,
     top = eyeY + 0.12;
   return !nearby(meshes, x, z).some((m) => {
-    if (!m.solid || m.id === "site-ground" || m.surfaceMesh) return false;
+    if (!m.solid) return false;
+    if (m.id === "site-ground" || m.surfaceMesh) {
+      const height = triangleHeight(m, x, z);
+      return Number.isFinite(height) && height > feet && height < top;
+    }
     const b = bounds(m);
     if (b.max[1] <= feet || b.min[1] >= top) return false;
     const nx = Math.max(b.min[0], Math.min(x, b.max[0])),

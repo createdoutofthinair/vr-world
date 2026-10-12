@@ -38,7 +38,7 @@
       "title": "Materials and export hardening",
       "state": "partial",
       "externalProofPending": true,
-      "evidence": "tests/package.test.ts; selected scopes, strict group budgets, model/texture hashes, SVG plans and CSV inventory; native profile unverified; selected authored-room package reconstruction includes associated pieces and supporting slab"
+      "evidence": "tests/package.test.ts; selected scopes, strict group budgets, model/texture hashes, SVG plans and CSV inventory; native profile unverified; selected authored-room package reconstruction includes associated pieces and supporting slab; tests/texture-alpha.test.ts: actual PNG transparency classification"
     },
     {
       "id": "M6",
@@ -79,7 +79,8 @@
       "id": "M11",
       "title": "Full v1 polish and release",
       "state": "missing",
-      "externalProofPending": true
+      "externalProofPending": true,
+      "evidence": "; tests/glb.test.ts: optional static GLB with independent binary, PBR, alpha and selected-scope fixtures; external viewer and full polish pending"
     },
     {
       "id": "C0",
@@ -114,7 +115,7 @@
       "title": "Terrain, bridges, and viaducts",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "tests/effects.test.ts; supported bridge; authored viaduct pending"
+      "evidence": "tests/effects.test.ts; supported bridge; authored viaduct pending; tests/viaduct.test.ts and tests/package.test.ts: three-block graded viaduct, grounded piers, underpass and actual reconstructed walking; arbitrary authoring and visual/native proof pending"
     },
     {
       "id": "C5",

@@ -150,7 +150,7 @@ export function Properties() {
   return (
     <div className="panel-pad properties">
       <div className="panel-eyebrow">
-        BUILDING RECIPE <span>v0.4</span>
+        BUILDING RECIPE <span>v0.5</span>
       </div>
       <label className="field">
         Project name
@@ -749,13 +749,15 @@ export function ExportPanel() {
     [members, setMembers] = useState(128),
     [extent, setExtent] = useState(40),
     [triangles, setTriangles] = useState(30000),
-    [strict, setStrict] = useState(false);
+    [strict, setStrict] = useState(false),
+    [includeGLB, setIncludeGLB] = useState(false);
   const s = useStudio(),
     settings = {
       scope,
       selected: s.selected ? [s.selected] : [],
       groupBudget: { members, horizontalExtent: extent, triangles },
       rejectOversize: strict,
+      includeGLB,
     },
     downloadZip = async () => {
       const b = await s.prepareExport("canonical", settings);
@@ -784,6 +786,18 @@ export function ExportPanel() {
           are pending.
         </span>
       </div>
+      <label className="check-field">
+        <input
+          type="checkbox"
+          checked={includeGLB}
+          onChange={(e) => setIncludeGLB(e.target.checked)}
+        />
+        Include GLB with embedded PBR materials
+      </label>
+      <p className="panel-note">
+        GLB keeps static geometry and modern materials. AW/VP commands remain
+        metadata.
+      </p>
       <label className="field">
         Export scope
         <select

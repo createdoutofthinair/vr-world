@@ -12,9 +12,13 @@ export function EffectStudio() {
   }, []);
   const set = (key: keyof EffectSettings, value: boolean) =>
       s.update({
+        ...(key === "viaduct" && value
+          ? { world: { ...p.world, enabled: true, blocks: 3 } }
+          : {}),
         effects: {
           ...p.effects,
           [key]: value,
+          ...(key === "viaduct" && value ? { waterfall: false } : {}),
           ...(key === "creek" && !value
             ? { waterfall: false, bridge: false, trail: false, motion: false }
             : {}),
@@ -34,6 +38,7 @@ export function EffectStudio() {
       <div className="panel-eyebrow">CREEKS, PATHS & EFFECTS</div>
       {(
         [
+          ["viaduct", "Elevated road · three-block neighborhood"],
           ["creek", "Directed creek and carved banks"],
           ["trail", "Walkable bank trail"],
           ["bridge", "Supported crossing"],
@@ -46,7 +51,7 @@ export function EffectStudio() {
             type="checkbox"
             checked={p.effects[key]}
             disabled={
-              (key !== "creek" && !p.effects.creek) ||
+              (key !== "creek" && key !== "viaduct" && !p.effects.creek) ||
               (key === "waterfall" && p.world.enabled)
             }
             onChange={(e) => set(key, e.target.checked)}

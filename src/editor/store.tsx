@@ -99,6 +99,7 @@ function initial(): Project {
   let p = structuredClone(DEFAULT_PROJECT);
   try {
     const s =
+      localStorage.getItem("c3-project-v5") ??
       localStorage.getItem("c3-project-v4") ??
       localStorage.getItem("c3-project-v3") ??
       localStorage.getItem("c3-project-v2") ??

@@ -20,6 +20,7 @@ export interface WorldSettings {
   roadWidth: number;
   sidewalkWidth: number;
   parkRatio: number;
+  viaductHeight: number;
   locks: Record<
     string,
     {
@@ -38,6 +39,7 @@ export const DEFAULT_WORLD: WorldSettings = {
   roadWidth: 6,
   sidewalkWidth: 1.8,
   parkRatio: 0.2,
+  viaductHeight: 3,
   locks: {},
 };
 export type GroundLayer = "grass" | "soil" | "rock" | "sand";
@@ -63,6 +65,7 @@ export interface TerrainSettings {
   edits: GroundOperation[];
 }
 export interface EffectSettings {
+  viaduct: boolean;
   creek: boolean;
   waterfall: boolean;
   trail: boolean;
@@ -278,6 +281,7 @@ export const DEFAULT_TERRAIN: TerrainSettings = {
   edits: [],
 };
 export const DEFAULT_EFFECTS: EffectSettings = {
+  viaduct: false,
   creek: false,
   waterfall: false,
   trail: false,
@@ -319,6 +323,7 @@ export const MATERIAL_ROLES = [
   "marking",
   "water",
   "foam",
+  "metal",
 ] as const;
 export type MaterialRole = (typeof MATERIAL_ROLES)[number];
 export type Biome = "temperate" | "arid" | "tropical" | "woodland" | "alien";
@@ -488,9 +493,9 @@ export interface SignSlot {
   };
 }
 export interface Project {
-  schemaVersion: 4;
-  generatorVersion: "0.4.0";
-  migratedFrom?: "0.1.0" | "0.2.0" | "0.3.0";
+  schemaVersion: 5;
+  generatorVersion: "0.5.0";
+  migratedFrom?: "0.1.0" | "0.2.0" | "0.3.0" | "0.4.0";
   structure: StructureSettings;
   world: WorldSettings;
   terrain: TerrainSettings;
@@ -571,8 +576,8 @@ export interface MeshData {
   solid: boolean;
 }
 export const DEFAULT_PROJECT: Project = {
-  schemaVersion: 4,
-  generatorVersion: "0.4.0",
+  schemaVersion: 5,
+  generatorVersion: "0.5.0",
   structure: { ...DEFAULT_STRUCTURE },
   world: { ...DEFAULT_WORLD, locks: {} },
   terrain: { ...DEFAULT_TERRAIN, edits: [] },
@@ -689,6 +694,7 @@ export function materialsFor(
     marking: "#eee7d5",
     water: "#39777d",
     foam: "#dae6dd",
+    metal: "#69767c",
   };
   const patterns: Partial<Record<MaterialRole, MaterialSpec["pattern"]>> = {
     wall:
@@ -720,6 +726,7 @@ export function materialsFor(
     marking: "solid",
     water: "solid",
     foam: "solid",
+    metal: "panels",
   };
   return Object.fromEntries(
     MATERIAL_ROLES.map((role) => [
@@ -730,8 +737,8 @@ export function materialsFor(
           project.textures[role] || role === "sign" ? "#ffffff" : colors[role],
         pattern: patterns[role] ?? "solid",
         opacity: role === "glass" ? 0.3 : role === "water" ? 0.8 : 1,
-        roughness: role === "glass" ? 0.15 : 0.84,
-        metalness: role === "trim" ? 0.1 : 0,
+        roughness: role === "glass" ? 0.15 : role === "metal" ? 0.55 : 0.84,
+        metalness: role === "metal" ? 0.6 : role === "trim" ? 0.1 : 0,
         scale: 1,
         ...project.materialOptions[role],
       },
@@ -792,8 +799,8 @@ export function validateProject(input: unknown): Project {
   if (p.schemaVersion === 1 && p.generatorVersion === "0.1.0") {
     p = {
       ...p,
-      schemaVersion: 4,
-      generatorVersion: "0.4.0",
+      schemaVersion: 5,
+      generatorVersion: "0.5.0",
       structure: { ...DEFAULT_STRUCTURE },
       world: { ...DEFAULT_WORLD, locks: {} },
       terrain: { ...DEFAULT_TERRAIN, edits: [] },
@@ -815,8 +822,8 @@ export function validateProject(input: unknown): Project {
   if (p.schemaVersion === 2 && p.generatorVersion === "0.2.0")
     p = {
       ...p,
-      schemaVersion: 4,
-      generatorVersion: "0.4.0",
+      schemaVersion: 5,
+      generatorVersion: "0.5.0",
       migratedFrom: "0.2.0",
       structure: { ...DEFAULT_STRUCTURE },
       world: { ...DEFAULT_WORLD, locks: {} },
@@ -833,13 +840,24 @@ export function validateProject(input: unknown): Project {
   if (p.schemaVersion === 3 && p.generatorVersion === "0.3.0")
     p = {
       ...p,
-      schemaVersion: 4,
-      generatorVersion: "0.4.0",
+      schemaVersion: 5,
+      generatorVersion: "0.5.0",
       migratedFrom: "0.3.0",
+      world: { ...DEFAULT_WORLD, ...(p.world as object) },
+      effects: { ...DEFAULT_EFFECTS, ...(p.effects as object) },
       rooms: p.rooms ?? [],
       plantLandmarks: p.plantLandmarks ?? [],
     };
-  if (p.schemaVersion !== 4 || p.generatorVersion !== "0.4.0")
+  if (p.schemaVersion === 4 && p.generatorVersion === "0.4.0")
+    p = {
+      ...p,
+      schemaVersion: 5,
+      generatorVersion: "0.5.0",
+      migratedFrom: "0.4.0",
+      world: { ...DEFAULT_WORLD, ...(p.world as object) },
+      effects: { ...DEFAULT_EFFECTS, ...(p.effects as object) },
+    };
+  if (p.schemaVersion !== 5 || p.generatorVersion !== "0.5.0")
     throw new Error("Unsupported project/generator version.");
   const number = (key: string, lo: number, hi: number) => {
     const n = p[key];
@@ -1311,6 +1329,17 @@ export function validateProject(input: unknown): Project {
   const blocks = worldNumber("blocks", 1, 3);
   if (!Number.isInteger(blocks))
     throw new Error("World blocks must be an integer.");
+  if (effects.viaduct && (!world.enabled || blocks !== 3))
+    throw new Error("Viaduct needs a three-block neighborhood.");
+  if (
+    effects.viaduct &&
+    world.viaductHeight /
+      (world.blockSize + world.roadWidth + 2 * world.sidewalkWidth) >
+      0.12
+  )
+    throw new Error(
+      "Viaduct approach exceeds the application grade budget of 12%.",
+    );
   const locks: WorldSettings["locks"] = {};
   if (Object.keys(world.locks).length > 100)
     throw new Error("Too many building locks.");
@@ -1424,8 +1453,8 @@ export function validateProject(input: unknown): Project {
     doorPoses[id] = angle;
   }
   return {
-    schemaVersion: 4,
-    generatorVersion: "0.4.0",
+    schemaVersion: 5,
+    generatorVersion: "0.5.0",
     kit: { buildingEnabled: kit.buildingEnabled, definitions, instances },
     materialOptions,
     materialMaps,
@@ -1457,9 +1486,10 @@ export function validateProject(input: unknown): Project {
       roadWidth: worldNumber("roadWidth", 4, 10),
       sidewalkWidth: worldNumber("sidewalkWidth", 1.2, 3),
       parkRatio: worldNumber("parkRatio", 0, 0.6),
+      viaductHeight: worldNumber("viaductHeight", 2.5, 5),
       locks,
     },
-    ...(["0.1.0", "0.2.0", "0.3.0"].includes(p.migratedFrom as string)
+    ...(["0.1.0", "0.2.0", "0.3.0", "0.4.0"].includes(p.migratedFrom as string)
       ? { migratedFrom: p.migratedFrom as Project["migratedFrom"] }
       : {}),
     structure: {

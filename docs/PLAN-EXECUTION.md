@@ -66,3 +66,7 @@ Rectangular authored room boundaries generate shared wall/door geometry, furnish
 The native calibration download contains actual metre cubes/beam, XYZ landmark, one-sided checker plane, opacity and solid/visible probes, plus candidate placements/groups and recording instructions. It is separate from the editable scene and is explicitly unverified in the native client.
 
 Native/GPU gates remain open. A named-action regression was fixed: targeted creation flags preserve the source defaults, named objects receive individual runtime render bindings, and invisible objects are excluded from pointer selection. Two new fixtures verify source/target state and actual serialized package reconstruction.
+
+## 0.5 interrupted-work recovery checkpoint
+
+Recovered the unpublished viaduct, material transparency, calibration and secondary GLB changes into a separate checkout. Added independent GLB binary/material/scope fixtures and a physical walkthrough of the emitted RWX viaduct. Automated suite: 75 passing; production build passes. This completes a bounded checkpoint only: arbitrary infrastructure authoring, external GLB viewer checks, browser/GPU inspection and native target acceptance remain pending. Next implementation task: per-unit/facade overrides with persistence, generation, scope and circulation fixtures.

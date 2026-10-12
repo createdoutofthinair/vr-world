@@ -21,6 +21,8 @@ for file in sorted(source.glob('*.json')):
     if p['world']['enabled']:
         spacing=p['world']['blockSize']+p['world']['roadWidth']+2*p['world']['sidewalkWidth'];distance=p['world']['blocks']*spacing*.95
         eye=np.array([distance*.85,distance*.9,distance*1.15]);target=np.array([0,2,0.])
+    if data.get('camera'):
+        eye=np.array(data['camera']['eye'],dtype=float);target=np.array(data['camera']['target'],dtype=float)
     forward=target-eye;forward/=np.linalg.norm(forward);right=np.cross(forward,[0.,1,0]);right/=np.linalg.norm(right);up=np.cross(right,forward)
     def project(v):
         rel=v-eye;z=rel@forward;return np.stack([W/2+(rel@right)/z*H*1.22,H/2-(rel@up)/z*H*1.22],axis=-1)*S

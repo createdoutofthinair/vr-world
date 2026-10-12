@@ -108,6 +108,27 @@ export async function createCalibrationKit(): Promise<Uint8Array> {
     false,
   );
   fixtures.push(nonsolid);
+  const moving = box(
+    "c3-move-probe",
+    "Two metre vertical move · native timing probe",
+    [24, 0, 5],
+    [1, 1, 1],
+    "wall",
+    "structure",
+    false,
+  );
+  moving.action = "create solid off, move 0 2 0 time=2 loop";
+  const rotating = box(
+    "c3-rotate-probe",
+    "Candidate 10 RPM bar · native units unverified",
+    [28, 1, 5],
+    [3, 0.2, 0.2],
+    "wall",
+    "structure",
+    false,
+  );
+  rotating.action = "create solid off, rotate 0 10 0";
+  fixtures.push(moving, rotating);
   const placements = [];
   const models: Record<string, { path: string; hash: string }> = {};
   for (const fixture of fixtures) {
@@ -173,7 +194,12 @@ export async function createCalibrationKit(): Promise<Uint8Array> {
     "c3-calibration-manifest.json",
     JSON.stringify(
       {
-        purpose: "native coordinate, winding, UV, opacity and solidity probes",
+        purpose:
+          "native coordinate, winding, UV, opacity, solidity and motion probes",
+        motionAdapters: {
+          move: "2 m vertical, explicit time=2 loop; native timing pending",
+          rotate: "candidate 10 RPM; expected 6 s revolution is unverified",
+        },
         nativeVerified: false,
         profile: EXPORT_PROFILE,
         placementAdapters: {
@@ -193,7 +219,7 @@ export async function createCalibrationKit(): Promise<Uint8Array> {
   );
   zip.file(
     "c3-calibration-instructions.md",
-    `# Virtual Paradise native calibration kit\n\nThese are provisional probes, not a verified import profile. Use a disposable test parcel. Host models/textures on an object path, then place the models manually from the metre-coordinate table before trying either group/TSV adapter. Do not use both adapters on the same probe set.\n\nCheck the cube is 1 m and beam 10 m; separately check cube origins are displaced by 1 m and 10 m. The XYZ landmark has a 3 m red X bar, 2 m green Y bar and 1 m blue Z bar. Measure geometry scale separately from placement scale.\n\nThe single sided plane should be visible looking from positive Z and culled from negative Z. Its texture is red/green across the top image row, blue/yellow across the bottom. Record actual UV orientation. Check 35% opacity and walk into each visible/nonsolid and invisible/solid probe. The group has zero pivot. AWG and VPPTSV placement conversions are candidates until this import passes.\n\nRecord VP client/build, renderer, world/object-path settings, measured geometry and placement distances, winding/UV screenshots, opacity and collision observations, group selection/save/reimport behavior, and any errors. Save a native group and property dump without changing the objects so a reference fixture can be compared to these candidate bytes.\n`,
+    `# Virtual Paradise native calibration kit\n\nThese are provisional probes, not a verified import profile. Use a disposable test parcel. Host models/textures on an object path, then place the models manually from the metre-coordinate table before trying either group/TSV adapter. Do not use both adapters on the same probe set.\n\nCheck the cube is 1 m and beam 10 m; separately check cube origins are displaced by 1 m and 10 m. The XYZ landmark has a 3 m red X bar, 2 m green Y bar and 1 m blue Z bar. Measure geometry scale separately from placement scale.\n\nThe single sided plane should be visible looking from positive Z and culled from negative Z. Its texture is red/green across the top image row, blue/yellow across the bottom. Record actual UV orientation. Check 35% opacity and walk into each visible/nonsolid and invisible/solid probe. The group has zero pivot. AWG and VPPTSV placement conversions are candidates until this import passes.\n\nMeasure the moving cube displacement, outbound time, return behavior and collision state. The rotation bar uses a deliberately provisional 10 RPM interpretation: record its actual direction, period, local pivot and timing before enabling the candidate adapter. A 6 second revolution is a hypothesis, not a verified VP default.\n\nRecord VP client/build, renderer, world/object-path settings, measured geometry and placement distances, winding/UV screenshots, opacity and collision observations, group selection/save/reimport behavior, and any errors. Save a native group and property dump without changing the objects so a reference fixture can be compared to these candidate bytes.\n`,
   );
   return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
 }

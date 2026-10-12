@@ -5,7 +5,9 @@ import { REFERENCE_EXAMPLES, referenceExample } from "../src/core/examples";
 import { buildScene } from "../src/core/geometry";
 const dir = process.argv[2] ?? "/tmp/c3-scene-review";
 mkdirSync(dir, { recursive: true });
+const only = process.argv[3];
 for (const theme of Object.keys(THEMES) as Theme[]) {
+  if (only && theme !== only) continue;
   const project = preset(
     theme === "temperate" ? "shop" : theme === "desert" ? "villa" : "house",
     theme,
@@ -22,6 +24,7 @@ for (const theme of Object.keys(THEMES) as Theme[]) {
 }
 
 for (const example of REFERENCE_EXAMPLES) {
+  if (only && example.id !== only) continue;
   const project = referenceExample(example.id)!,
     meshes = buildScene(project),
     materials = materialsFor(project);
