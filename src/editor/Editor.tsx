@@ -179,6 +179,13 @@ function EditorInner() {
   const s = useStudio(),
     api = useRef<DockviewApi | null>(null),
     layoutSub = useRef<{ dispose: () => void } | null>(null),
+    [focused, setFocused] = useState(true),
+    [card, setCard] = useState<string | null>(null),
+    [radial, setRadial] = useState<{
+      x: number;
+      y: number;
+      id: string | null;
+    } | null>(null),
     [menus, setMenus] = useState(false),
     [palette, setPalette] = useState(false),
     [query, setQuery] = useState("");
@@ -202,6 +209,12 @@ function EditorInner() {
     });
   };
   const open = (id: string) => {
+    if (focused) {
+      setCard(id === "viewport" ? null : id);
+      setRadial(null);
+      setMenus(false);
+      return;
+    }
     const a = api.current;
     if (!a) return;
     const existing = a.getPanel(id);
@@ -217,6 +230,15 @@ function EditorInner() {
   };
   useEffect(() => () => layoutSub.current?.dispose(), []);
   useEffect(() => {
+    const context = (e: Event) => {
+      if (!focused || s.view !== "authoring") return;
+      setCard(null);
+      setRadial((e as CustomEvent).detail);
+    };
+    window.addEventListener("c3-context", context);
+    return () => window.removeEventListener("c3-context", context);
+  }, [focused, s.view]);
+  useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const input = (e.target as HTMLElement).matches("input,textarea,select");
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -226,6 +248,8 @@ function EditorInner() {
       if (e.key === "Escape") {
         setPalette(false);
         setMenus(false);
+        setRadial(null);
+        setCard(null);
       }
       if (input) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -244,6 +268,14 @@ function EditorInner() {
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [s]);
+  const target = s.meshes.find((m) => m.id === radial?.id);
+  const radialActions = !target
+    ? ["presets", "world", "terrain", "themes", "history", "export"]
+    : target.category === "vegetation"
+      ? ["plants", "materials", "themes", "terrain", "effects", "performance"]
+      : target.category === "site" || target.category === "landscape"
+        ? ["world", "terrain", "materials", "themes", "effects", "plan"]
+        : ["properties", "building", "materials", "rooms", "signs", "plan"];
   const commands = [
     {
       label: "Reset workspace layout",
@@ -305,6 +337,9 @@ function EditorInner() {
             <Redo2 size={15} />
           </button>
           <span />
+          {!focused && (
+            <button onClick={() => setFocused(true)}>World view</button>
+          )}
           <div className="panel-menu">
             <button onClick={() => setMenus(!menus)}>
               <PanelLeft size={14} /> Panels <ChevronDown size={12} />
@@ -364,13 +399,135 @@ function EditorInner() {
           </button>
         </div>
       </div>
-      <div className="dock-container">
-        <DockviewReact
-          components={components}
-          onReady={ready}
-          theme={themeLight}
-          disableFloatingGroups={false}
-        />
+      <div className="dock-container world-first">
+        {focused ? (
+          <>
+            <Viewport />
+            <div className="world-tools" aria-label="World editing tools">
+              {["presets", "world", "terrain", "materials", "rooms"].map(
+                (id) => (
+                  <button
+                    key={id}
+                    title={panelNames[id]}
+                    onClick={() => open(id)}
+                  >
+                    {id === "presets"
+                      ? "Build"
+                      : id === "world"
+                        ? "City"
+                        : panelNames[id].split(" ")[0]}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() => s.setMode(s.mode === "walk" ? "orbit" : "walk")}
+              >
+                {s.mode === "walk" ? "Edit" : "Walk"}
+              </button>
+              <button
+                onClick={() =>
+                  setRadial({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    id: s.selected,
+                  })
+                }
+              >
+                Actions
+              </button>
+              <button
+                onClick={() => {
+                  setFocused(false);
+                  setCard(null);
+                  setRadial(null);
+                }}
+              >
+                Advanced
+              </button>
+            </div>
+            {!card && !radial && s.mode === "orbit" && (
+              <div className="world-hint">
+                Click to select · Right-click to edit · Esc to close
+              </div>
+            )}
+            {card &&
+              (() => {
+                const Card = components[card as keyof typeof components];
+                return (
+                  <section className="world-card" aria-label={panelNames[card]}>
+                    <header>
+                      <b>{panelNames[card]}</b>
+                      <button
+                        aria-label="Close editing card"
+                        onClick={() => setCard(null)}
+                      >
+                        <X size={18} />
+                      </button>
+                    </header>
+                    <div>
+                      <Card />
+                    </div>
+                  </section>
+                );
+              })()}
+            {radial && (
+              <>
+                <button
+                  className="world-dismiss"
+                  aria-label="Close radial menu"
+                  onClick={() => setRadial(null)}
+                />
+                <div
+                  className="world-radial"
+                  role="dialog"
+                  aria-label="Object actions"
+                  style={{
+                    left: Math.min(
+                      Math.max(150, radial.x),
+                      window.innerWidth - 150,
+                    ),
+                    top: Math.min(
+                      Math.max(150, radial.y - 110),
+                      window.innerHeight - 260,
+                    ),
+                  }}
+                >
+                  <div className="world-radial-center">
+                    <Box size={25} />
+                    <span>
+                      {s.meshes.find((m) => m.id === radial.id)?.label ??
+                        "World"}
+                    </span>
+                  </div>
+                  {radialActions.map((id, i) => (
+                    <button
+                      key={id}
+                      style={{
+                        transform: `translate(${Math.cos(((i * 60 - 90) * Math.PI) / 180) * 103}px, ${Math.sin(((i * 60 - 90) * Math.PI) / 180) * 103}px)`,
+                      }}
+                      onClick={() => open(id)}
+                    >
+                      {id === "properties"
+                        ? "Configure"
+                        : id === "world"
+                          ? "Roads"
+                          : id === "rooms"
+                            ? "Interior"
+                            : panelNames[id].split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <DockviewReact
+            components={components}
+            onReady={ready}
+            theme={themeLight}
+            disableFloatingGroups={false}
+          />
+        )}
       </div>
       <footer className="editor-status">
         <span>

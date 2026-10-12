@@ -308,6 +308,35 @@ export function Viewport() {
           : null,
       );
     };
+    const contextMenu = (e: MouseEvent) => {
+      if (current.current.mode !== "orbit") return;
+      e.preventDefault();
+      const rect = renderer.domElement.getBoundingClientRect();
+      ray.setFromCamera(
+        new THREE.Vector2(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1,
+        ),
+        camera,
+      );
+      const hit = ray
+        .intersectObjects(group.children, false)
+        .find(
+          (h) =>
+            h.object.visible && (h.object.userData.id || h.object.userData.ids),
+        );
+      const id = hit
+        ? (hit.object.userData.id ??
+          hit.object.userData.ids[hit.instanceId ?? 0])
+        : null;
+      current.current.select(id);
+      window.dispatchEvent(
+        new CustomEvent("c3-context", {
+          detail: { x: e.clientX, y: e.clientY, id },
+        }),
+      );
+    };
+    renderer.domElement.addEventListener("contextmenu", contextMenu);
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointerup", pointerUp);
     renderer.domElement.addEventListener("pointermove", pointerMove);
@@ -449,6 +478,7 @@ export function Viewport() {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
+      renderer.domElement.removeEventListener("contextmenu", contextMenu);
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
       renderer.domElement.removeEventListener("pointerup", pointerUp);
       renderer.domElement.removeEventListener("pointermove", pointerMove);

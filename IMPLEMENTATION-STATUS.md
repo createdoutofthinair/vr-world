@@ -51,6 +51,12 @@ Saved internal X/Z street-axis offsets now move complete rows/columns while pres
 
 All 85 tests and production build pass. Regression evidence includes asymmetric edited streets, exact endpoint/span bounds, graded ground, a physical pavement-to-shop route, invalid frontage rejection, dormant offset recovery and the actual reconstructed RWX package bounds for road/junction/path pieces. Browser map interaction/GPU and native target joins remain uninspected. This is constrained orthogonal editing, not arbitrary node drawing, deletion, curves or irregular junction support. Concrete next city task: shared road-graph geometry and diagnostics for authored non-grid edges, then curves/parcel extraction; C6 streaming and measured whole-city budgets remain open.
 
+## World-first UX checkpoint
+
+The default editor now presents a full viewport, narrow tool rail, one closable contextual editing card and an object-picked right-click radial action menu. Menus use working studio controls selected by building/environment/vegetation context; an Actions button supports keyboard/touch activation without right-click. Escape dismisses menus/cards. Existing docked panels and saved layouts remain available under Advanced, with a World view return action. Existing project undo/export/cutaway/walk controls remain functional. The cards reuse existing authored controls; some are global material/building recipe controls, not per-instance editing. Direct drag transforms, resize handles, touch long-press, finer per-instance cards and minimap are pending. Curved roads are paused per user instruction.
+
+All 85 existing automated tests pass; production build passes. Browser/GPU interaction and responsive visual acceptance have not been performed. This is the first functional layout pass toward the approved generated concept; scene fidelity and all illustrated controls are not claimed implemented.
+
 ## Verification
 
 - Automated suite: **85 tests passing** at this checkpoint; rerun on each geometry/schema/export/runtime change.
