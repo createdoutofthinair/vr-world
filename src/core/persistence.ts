@@ -9,17 +9,27 @@ function open(): Promise<IDBDatabase> {
       reject(new Error("IndexedDB unavailable"));
       return;
     }
+    let blocked = false;
     const request = indexedDB.open(DATABASE, VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       for (const name of ["projects", "versions", "assets"])
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      if (blocked) {
+        request.result.close();
+        return;
+      }
+      request.result.onversionchange = () => request.result.close();
+      resolve(request.result);
+    };
     request.onerror = () =>
       reject(request.error ?? new Error("Database could not open"));
-    request.onblocked = () =>
+    request.onblocked = () => {
+      blocked = true;
       reject(new Error("Close older editor tabs to upgrade project storage."));
+    };
   });
 }
 function write(
@@ -98,7 +108,10 @@ export async function packProject(
   );
   return { document, assets };
 }
-async function unpack(db: IDBDatabase, input: unknown): Promise<Project> {
+export async function unpackProject(
+  input: unknown,
+  resolveAsset: (id: string) => Promise<unknown>,
+): Promise<Project> {
   const cache = new Map<string, string>();
   async function expand(value: unknown): Promise<unknown> {
     if (Array.isArray(value)) return Promise.all(value.map(expand));
@@ -107,10 +120,16 @@ async function unpack(db: IDBDatabase, input: unknown): Promise<Project> {
       if (typeof v.$c3Asset === "string") {
         let data = cache.get(v.$c3Asset);
         if (!data) {
-          const stored = await read(db, "assets", v.$c3Asset);
+          if (!/^c3-asset-[a-f0-9]{64}$/.test(v.$c3Asset))
+            throw new Error("Invalid stored asset reference.");
+          const stored = await resolveAsset(v.$c3Asset);
           if (typeof stored !== "string")
             throw new Error(
               "Missing stored texture. Download a recovery copy before replacing it.",
+            );
+          if ("c3-asset-" + (await sha256(pngBytes(stored))) !== v.$c3Asset)
+            throw new Error(
+              "Stored asset hash mismatch. Restore a prior version or portable project.",
             );
           data = stored;
           cache.set(v.$c3Asset, data);
@@ -134,6 +153,9 @@ async function unpack(db: IDBDatabase, input: unknown): Promise<Project> {
     return value;
   }
   return validateProject(await expand(input));
+}
+async function unpack(db: IDBDatabase, input: unknown): Promise<Project> {
+  return unpackProject(input, (id) => read(db, "assets", id));
 }
 export async function saveProject(project: Project): Promise<void> {
   const packed = await packProject(project),

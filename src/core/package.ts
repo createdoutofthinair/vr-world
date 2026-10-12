@@ -1,6 +1,8 @@
 import JSZip from "jszip";
+import { checkZipBudget } from "./zip-budget";
 import {
   materialsFor,
+  MATERIAL_ROLES,
   MaterialRole,
   MeshData,
   Project,
@@ -18,8 +20,15 @@ import {
 } from "./rwx";
 import { pngBytes, sha256, textureImage, pngDimensions } from "./textures";
 import { loadStandardTextures, standardSource } from "./standard-textures";
-import { partitionGroups, serializeVPPTSV, parseVPPTSV } from "./groups";
+import {
+  partitionGroups,
+  serializeVPPTSV,
+  parseVPPTSV,
+  GroupBudget,
+  DEFAULT_GROUP_BUDGET,
+} from "./groups";
 import { parseAction, creationState, ActionRuntime } from "./actions";
+import { planSVG, inventoryCSV } from "./plan-output";
 import { serializeAWG, parseAWG } from "./awg";
 interface Placement {
   id: string;
@@ -36,11 +45,13 @@ interface Placement {
   action: string;
 }
 interface Manifest {
+  scope?: { mode: string; ids: string[] };
   schemaVersion: 1;
   projectName: string;
   profile: typeof EXPORT_PROFILE;
   placements: Placement[];
   models: Record<string, string>;
+  modelHashes?: Record<string, string>;
   textures: Record<
     string,
     { path: string; hash: string; width: number; height: number }
@@ -77,7 +88,14 @@ Object rotations are baked into geometry. Doors export their saved static pose; 
 
 Generated material patterns are original procedural assets. Uploaded textures retain their user's provenance. The editable project includes the normalized textures actually used.
 `;
-export interface PackageOptions {
+export type ExportScope = "all" | "building" | "environment" | "selected";
+export interface ExportSettings {
+  scope?: ExportScope;
+  selected?: string[];
+  groupBudget?: GroupBudget;
+  rejectOversize?: boolean;
+}
+export interface PackageOptions extends ExportSettings {
   previewMode?: "canonical" | "awg-probe";
   images?: Partial<Record<MaterialRole, string>>;
   progress?: (stage: string, percent: number) => void;
@@ -94,13 +112,52 @@ export async function createPackage(
     .filter((role) => standardSource(specs[role], project))
     .map((role) => specs[role].pattern);
   if (standardPatterns.length) await loadStandardTextures(standardPatterns);
-  const meshes = buildScene(project);
+  const scene = buildScene(project),
+    scope = options.scope ?? "all",
+    selected = new Set(options.selected ?? []);
+  if (!["all", "building", "environment", "selected"].includes(scope))
+    throw new Error("Unknown export scope.");
+  const buildingCategories = new Set([
+    "structure",
+    "windows",
+    "roof",
+    "interior",
+  ]);
+  const meshes = scene.filter(
+    (mesh) =>
+      scope === "all" ||
+      (scope === "selected"
+        ? selected.has(mesh.id)
+        : scope === "building"
+          ? buildingCategories.has(mesh.category)
+          : !buildingCategories.has(mesh.category)),
+  );
+  if (!meshes.length)
+    throw new Error(
+      "Export scope contains no generated objects. Select an object or change scope.",
+    );
+  if (
+    scope === "selected" &&
+    [...selected].some((id) => !scene.some((m) => m.id === id))
+  )
+    throw new Error(
+      "Selected export contains stale object IDs. Select from the current scene.",
+    );
+  const groupBudget = options.groupBudget ?? DEFAULT_GROUP_BUDGET;
+  const groups = partitionGroups(meshes, groupBudget);
+  const oversize = groups.filter((group) => group.oversize);
+  if (options.rejectOversize && oversize.length)
+    throw new Error(
+      `${oversize.length} individual mesh assets exceed the chosen group budget. Increase it or reduce the mesh dimensions; the exporter will not silently omit geometry.`,
+    );
   const manifest: Manifest = {
+    scope: { mode: scope, ids: meshes.map((m) => m.id) },
     schemaVersion: 1,
     projectName: project.name,
     profile: EXPORT_PROFILE,
     placements: [],
     models: {},
+    modelHashes: {},
     textures: {},
   };
   const textureRefs = {} as Record<MaterialRole, string>;
@@ -148,7 +205,9 @@ export async function createPackage(
     const path = `object-path/models/${model}.rwx`;
     if (!manifest.models[model]) {
       manifest.models[model] = path;
-      zip.file(path, serializeRWX(mesh, materialSpec, textureRef));
+      const serialized = serializeRWX(mesh, materialSpec, textureRef);
+      manifest.modelHashes![model] = await sha256(serialized);
+      zip.file(path, serialized);
     }
     manifest.placements.push({
       id: mesh.id,
@@ -165,9 +224,35 @@ export async function createPackage(
       action: mesh.action ?? `create solid ${mesh.solid ? "on" : "off"}`,
     });
   }
+  const levels = [
+    ...new Set(
+      meshes
+        .filter((m) =>
+          ["structure", "windows", "interior"].includes(m.category),
+        )
+        .map((m) => m.level ?? 0),
+    ),
+  ].sort((a, b) => a - b);
+  for (const level of levels)
+    zip.file(
+      `c3-plan-level-${level + 1}.svg`,
+      planSVG(meshes, project.name, level),
+    );
+  zip.file(
+    "c3-object-inventory.csv",
+    inventoryCSV(
+      manifest.placements.map((placement, i) => ({
+        id: placement.id,
+        model: placement.model,
+        material: placement.material,
+        triangles: meshes[i].indices.length / 3,
+        position: placement.positionMeters,
+        action: placement.action,
+      })),
+    ),
+  );
   zip.file("c3-manifest.json", JSON.stringify(manifest, null, 2));
   zip.file("c3-placements.json", JSON.stringify(manifest.placements, null, 2));
-  const groups = partitionGroups(meshes);
   manifest.experimentalGroups = [];
   for (const group of groups) {
     const entries = group.members.map((member) => {
@@ -206,7 +291,9 @@ export async function createPackage(
       {
         format: "c3 canonical groups",
         nativeAWG: false,
-        budget: { members: 128, horizontalExtent: 40, triangles: 30000 },
+        budget: groupBudget,
+        budgetIsNativeLimit: false,
+        oversizeGroups: oversize.map((group) => group.id),
         groups,
       },
       null,
@@ -292,12 +379,16 @@ export async function createPackage(
       {
         status: "provisional",
         nativeVPVerified: false,
-        scope: "emitted single-clump RWX subset",
+        geometryProfile: "emitted single-clump RWX subset",
         profile: EXPORT_PROFILE,
         models: Object.keys(manifest.models).length,
         placements: manifest.placements.length,
         triangles: meshes.reduce((n, m) => n + m.indices.length / 3, 0),
         missingDependencies: [],
+        scope,
+        groupBudget,
+        oversizeGroups: oversize.map((group) => group.id),
+        expandedObjectCount: meshes.length,
         awg: "experimental syntax adapter; native import unverified",
         motion: "VP move subset; candidate rotate adapter disabled by default",
       },
@@ -334,10 +425,12 @@ export async function readProducedPackage(
 ): Promise<
   Pick<ExportBundle, "meshes" | "images" | "specs" | "textureImages">
 > {
+  checkZipBudget(bytes);
   const zip = await JSZip.loadAsync(bytes),
     manifestFile = zip.file("c3-manifest.json");
   if (!manifestFile) throw new Error("Missing package manifest.");
   const manifest = JSON.parse(await manifestFile.async("string")) as Manifest;
+  validateManifest(manifest);
   const projectFile = zip.file("c3-world.c3world.json");
   if (!projectFile) throw new Error("Missing editable project.");
   const project = validateProject(
@@ -359,6 +452,12 @@ export async function readProducedPackage(
       const bytes = await file.async("uint8array");
       if ((await sha256(bytes)) !== group.hash)
         throw new Error("Group archive hash mismatch.");
+      checkZipBudget(bytes, {
+        compressed: 8_000_000,
+        expanded: 8_000_000,
+        file: 8_000_000,
+        entries: 2,
+      });
       const archive = await JSZip.loadAsync(bytes),
         awg = archive.file(group.id + ".awg");
       if (!awg) throw new Error("Missing AWG payload.");
@@ -383,19 +482,42 @@ export async function readProducedPackage(
       throw new Error("Group coverage is not exactly once.");
     placements = resolved;
   }
+  const parsedModels = new Map<string, ParsedRWX>();
   for (const p of placements) {
     const model = zip.file(manifest.models[p.model]);
     if (!model) throw new Error(`Missing model: ${p.model}.`);
     const program = parseAction(p.action),
       actionState = creationState(program, p.solid);
-    const parsed: ParsedRWX = parseRWX(await model.async("string"), {
-      id: p.id,
-      label: p.label,
-      origin: p.positionMeters,
-      solid: actionState.solid,
-      category: p.category,
-      material: p.material,
-    });
+    let template = parsedModels.get(p.model);
+    if (!template) {
+      const serialized = await model.async("string");
+      if (
+        manifest.modelHashes &&
+        (await sha256(serialized)) !== manifest.modelHashes[p.model]
+      )
+        throw new Error("Model hash mismatch.");
+      template = parseRWX(serialized, {
+        id: p.model,
+        label: p.model,
+        origin: [0, 0, 0],
+        solid: true,
+        category: p.category,
+        material: p.material,
+      });
+      parsedModels.set(p.model, template);
+    }
+    const parsed: ParsedRWX = {
+      ...template,
+      mesh: {
+        ...template.mesh,
+        id: p.id,
+        label: p.label,
+        origin: p.positionMeters,
+        solid: actionState.solid,
+        category: p.category,
+        material: p.material,
+      },
+    };
     const textureName = actionState.texture ?? parsed.texture,
       texture = manifest.textures[textureName];
     if (!texture) throw new Error("Missing texture manifest dependency.");
@@ -405,6 +527,12 @@ export async function readProducedPackage(
       const decoded = await file.async("uint8array");
       if ((await sha256(decoded)) !== texture.hash)
         throw new Error("Texture hash mismatch.");
+      const dimensions = pngDimensions(decoded);
+      if (
+        dimensions.width !== texture.width ||
+        dimensions.height !== texture.height
+      )
+        throw new Error("Texture dimensions differ from the manifest.");
       textureImages[textureName] =
         "data:image/png;base64," + (await file.async("base64"));
     }
@@ -439,6 +567,113 @@ export async function readProducedPackage(
     }
   }
   return { meshes, images, specs, textureImages };
+}
+function validateManifest(m: Manifest) {
+  const dictionary = (v: unknown) =>
+    !!v && typeof v === "object" && !Array.isArray(v);
+  const name = (v: unknown) =>
+    typeof v === "string" && /^c3-[a-z0-9-]+$/.test(v);
+  const vector = (v: unknown) =>
+    Array.isArray(v) &&
+    v.length === 3 &&
+    v.every(
+      (n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 1e6,
+    );
+  const hash = (v: unknown) =>
+    typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
+  if (
+    !m ||
+    m.schemaVersion !== 1 ||
+    !m.profile ||
+    m.profile.id !== EXPORT_PROFILE.id ||
+    m.profile.metersPerUnit !== EXPORT_PROFILE.metersPerUnit ||
+    m.profile.winding !== EXPORT_PROFILE.winding ||
+    m.profile.nativeVerified !== false ||
+    !Array.isArray(m.placements) ||
+    m.placements.length > 25000 ||
+    !dictionary(m.models) ||
+    !dictionary(m.textures)
+  )
+    throw new Error("Invalid or unsupported package manifest/profile.");
+  if (
+    Object.keys(m.models).length > 25000 ||
+    Object.keys(m.textures).length > 5000
+  )
+    throw new Error("Package asset count exceeds application budget.");
+  for (const [key, path] of Object.entries(m.models))
+    if (!name(key) || path !== `object-path/models/${key}.rwx`)
+      throw new Error("Unsafe model path or namespace.");
+  if (m.modelHashes !== undefined) {
+    if (!dictionary(m.modelHashes)) throw new Error("Invalid model hashes.");
+    for (const key of Object.keys(m.models))
+      if (!hash(m.modelHashes[key])) throw new Error("Missing model hash.");
+  }
+  for (const [key, t] of Object.entries(m.textures))
+    if (
+      !name(key) ||
+      !t ||
+      t.path !== `object-path/textures/${key}.png` ||
+      !hash(t.hash) ||
+      !Number.isInteger(t.width) ||
+      !Number.isInteger(t.height) ||
+      t.width < 1 ||
+      t.height < 1 ||
+      t.width > 1024 ||
+      t.height > 1024
+    )
+      throw new Error("Invalid texture metadata or namespace.");
+  const ids = new Set<string>();
+  for (const p of m.placements) {
+    if (
+      !p ||
+      typeof p.id !== "string" ||
+      p.id.length > 256 ||
+      ids.has(p.id) ||
+      typeof p.label !== "string" ||
+      p.label.length > 1000 ||
+      !name(p.model) ||
+      !Object.hasOwn(m.models, p.model) ||
+      !vector(p.positionMeters) ||
+      !MATERIAL_ROLES.includes(p.material) ||
+      ![
+        "structure",
+        "windows",
+        "roof",
+        "interior",
+        "site",
+        "vegetation",
+        "landscape",
+      ].includes(p.category) ||
+      typeof p.solid !== "boolean" ||
+      typeof p.action !== "string" ||
+      p.action.length > 4096 ||
+      (p.walkable !== undefined && typeof p.walkable !== "boolean") ||
+      (p.surfaceMesh !== undefined && typeof p.surfaceMesh !== "boolean") ||
+      (p.level !== undefined &&
+        (!Number.isInteger(p.level) || p.level < 0 || p.level > 5))
+    )
+      throw new Error("Invalid or duplicate placement metadata.");
+    ids.add(p.id);
+  }
+  if (m.experimentalGroups !== undefined) {
+    if (
+      !Array.isArray(m.experimentalGroups) ||
+      m.experimentalGroups.length > 25000
+    )
+      throw new Error("Invalid group metadata.");
+    for (const g of m.experimentalGroups)
+      if (
+        !g ||
+        !name(g.id) ||
+        g.path !== `object-path/groups/${g.id}.zip` ||
+        !vector(g.pivot) ||
+        !hash(g.hash) ||
+        !Array.isArray(g.ids) ||
+        g.ids.length > 1024 ||
+        g.ids.some((id) => !ids.has(id))
+      )
+        throw new Error("Invalid group metadata or namespace.");
+  }
 }
 export function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type })),

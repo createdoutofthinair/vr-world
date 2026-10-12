@@ -148,6 +148,39 @@ export const DEFAULT_KIT: KitSettings = {
   ],
   instances: [],
 };
+export const PLANT_FAMILIES = [
+  "broadleaf",
+  "canopy",
+  "acacia",
+  "ancient",
+  "conifer",
+  "palm",
+  "fern",
+  "broadleaf-herb",
+  "agave",
+  "cactus",
+  "alien",
+  "grass",
+  "fungi",
+  "shrub",
+  "hedge",
+  "pad-cactus",
+  "drooping",
+  "spiral",
+  "log",
+  "stump",
+] as const;
+export type PlantFamilyName = (typeof PLANT_FAMILIES)[number];
+export interface PlantLandmark {
+  id: string;
+  family: PlantFamilyName;
+  seed: number;
+  x: number;
+  z: number;
+  scale: number;
+  locked: boolean;
+  recipe?: PlantSettings;
+}
 export interface PlantSettings {
   algorithm: "rules" | "attraction";
   quality: "full" | "economy";
@@ -158,6 +191,46 @@ export interface PlantSettings {
   lean: number;
   leafDensity: number;
   pruned: number[];
+}
+export function validatePlantSettings(input: unknown): PlantSettings {
+  const plants = input as PlantSettings;
+  if (
+    !plants ||
+    !["rules", "attraction"].includes(plants.algorithm) ||
+    !["full", "economy"].includes(plants.quality) ||
+    !["sapling", "mature", "old"].includes(plants.age) ||
+    ![
+      plants.height,
+      plants.crown,
+      plants.trunk,
+      plants.lean,
+      plants.leafDensity,
+    ].every(Number.isFinite) ||
+    plants.height < 0.5 ||
+    plants.height > 1.8 ||
+    plants.crown < 0.5 ||
+    plants.crown > 1.8 ||
+    plants.trunk < 0.5 ||
+    plants.trunk > 1.8 ||
+    Math.abs(plants.lean) > 0.25 ||
+    plants.leafDensity < 0.2 ||
+    plants.leafDensity > 1 ||
+    !Array.isArray(plants.pruned) ||
+    plants.pruned.length > 24 ||
+    plants.pruned.some((n) => !Number.isInteger(n) || n < 0 || n > 23)
+  )
+    throw new Error("Invalid plant recipe.");
+  return {
+    algorithm: plants.algorithm,
+    quality: plants.quality,
+    age: plants.age,
+    height: plants.height,
+    crown: plants.crown,
+    trunk: plants.trunk,
+    lean: plants.lean,
+    leafDensity: plants.leafDensity,
+    pruned: [...new Set(plants.pruned)],
+  };
 }
 export const DEFAULT_PLANTS: PlantSettings = {
   algorithm: "rules",
@@ -404,6 +477,7 @@ export interface Project {
   materialMaps: Partial<Record<MaterialRole, MaterialMaps>>;
   signs: SignSlot[];
   plants: PlantSettings;
+  plantLandmarks: PlantLandmark[];
   biome: Biome;
   landscape: LandscapeSettings;
   architectureDetails: boolean;
@@ -483,6 +557,7 @@ export const DEFAULT_PROJECT: Project = {
   materialMaps: {},
   signs: [],
   plants: { ...DEFAULT_PLANTS, pruned: [] },
+  plantLandmarks: [],
   biome: "temperate",
   landscape: { ...DEFAULT_LANDSCAPE },
   architectureDetails: true,
@@ -702,6 +777,7 @@ export function validateProject(input: unknown): Project {
       materialMaps: {},
       signs: [],
       plants: { ...DEFAULT_PLANTS, pruned: [] },
+      plantLandmarks: [],
       migratedFrom: "0.1.0",
       biome: DEFAULT_BIOME[p.theme as Theme],
       landscape: { ...DEFAULT_LANDSCAPE },
@@ -724,6 +800,7 @@ export function validateProject(input: unknown): Project {
       materialMaps: {},
       signs: [],
       plants: { ...DEFAULT_PLANTS, pruned: [] },
+      plantLandmarks: [],
     };
   if (p.schemaVersion !== 3 || p.generatorVersion !== "0.3.0")
     throw new Error("Unsupported project/generator version.");
@@ -962,33 +1039,46 @@ export function validateProject(input: unknown): Project {
   )
     throw new Error("Invalid landscape recipe.");
   const structure = p.structure as StructureSettings;
-  const plants = p.plants as PlantSettings;
-  if (
-    !plants ||
-    !["rules", "attraction"].includes(plants.algorithm) ||
-    !["full", "economy"].includes(plants.quality) ||
-    !["sapling", "mature", "old"].includes(plants.age) ||
-    ![
-      plants.height,
-      plants.crown,
-      plants.trunk,
-      plants.lean,
-      plants.leafDensity,
-    ].every(Number.isFinite) ||
-    plants.height < 0.5 ||
-    plants.height > 1.8 ||
-    plants.crown < 0.5 ||
-    plants.crown > 1.8 ||
-    plants.trunk < 0.5 ||
-    plants.trunk > 1.8 ||
-    Math.abs(plants.lean) > 0.25 ||
-    plants.leafDensity < 0.2 ||
-    plants.leafDensity > 1 ||
-    !Array.isArray(plants.pruned) ||
-    plants.pruned.length > 24 ||
-    plants.pruned.some((n) => !Number.isInteger(n) || n < 0 || n > 23)
-  )
-    throw new Error("Invalid plant recipe.");
+  const plants = validatePlantSettings(p.plants);
+  const rawLandmarks = p.plantLandmarks ?? [];
+  if (!Array.isArray(rawLandmarks) || rawLandmarks.length > 100)
+    throw new Error("Invalid plant landmarks.");
+  const landmarkIds = new Set<string>();
+  const plantLandmarks: PlantLandmark[] = rawLandmarks.map(
+    (record: PlantLandmark) => {
+      if (
+        !record ||
+        typeof record.id !== "string" ||
+        !/^landmark-[a-z0-9-]+$/.test(record.id) ||
+        landmarkIds.has(record.id) ||
+        !PLANT_FAMILIES.includes(record.family) ||
+        !Number.isInteger(record.seed) ||
+        record.seed < 0 ||
+        record.seed > 2147483647 ||
+        ![record.x, record.z, record.scale].every(Number.isFinite) ||
+        Math.abs(record.x) > 200 ||
+        Math.abs(record.z) > 200 ||
+        record.scale < 0.2 ||
+        record.scale > 3 ||
+        typeof record.locked !== "boolean" ||
+        (record.locked && !record.recipe)
+      )
+        throw new Error("Invalid or duplicate plant landmark.");
+      landmarkIds.add(record.id);
+      return {
+        id: record.id,
+        family: record.family,
+        seed: record.seed,
+        x: record.x,
+        z: record.z,
+        scale: record.scale,
+        locked: record.locked,
+        recipe: record.recipe
+          ? validatePlantSettings(record.recipe)
+          : undefined,
+      };
+    },
+  );
   const kit = p.kit as KitSettings;
   if (
     !kit ||
@@ -1153,7 +1243,8 @@ export function validateProject(input: unknown): Project {
       ) ||
       !Number.isInteger(record.storeys) ||
       record.storeys < 1 ||
-      record.storeys > 4
+      record.storeys > 4 ||
+      (record.park !== undefined && typeof record.park !== "boolean")
     )
       throw new Error("Invalid locked building.");
     locks[id] = { ...record };
@@ -1254,6 +1345,7 @@ export function validateProject(input: unknown): Project {
     materialMaps,
     signs,
     plants: { ...plants, pruned: [...new Set(plants.pruned)] },
+    plantLandmarks,
     terrain: {
       form: terrain.form,
       geology: terrain.geology,
@@ -1352,6 +1444,7 @@ export function preset(
     materialMaps: {},
     signs: [],
     plants: { ...DEFAULT_PLANTS, pruned: [] },
+    plantLandmarks: [],
     terrain: { ...DEFAULT_TERRAIN, edits: [] },
     effects: { ...DEFAULT_EFFECTS },
     world: { ...DEFAULT_WORLD, locks: {} },
@@ -1428,5 +1521,26 @@ export function applyTheme(project: Project, theme: Theme): Partial<Project> {
       enabled: true,
       density: theme === "jungle" ? 0.8 : theme === "desert" ? 0.4 : 0.65,
     },
+  };
+}
+
+/** Replace structural template settings while retaining the user's world, assets and authored edits. */
+export function applyBuildingPreset(
+  project: Project,
+  archetype: Archetype,
+): Project {
+  const recipe = preset(archetype, project.theme);
+  return {
+    ...project,
+    archetype,
+    width: recipe.width,
+    depth: recipe.depth,
+    height: recipe.height,
+    wallThickness: recipe.wallThickness,
+    doorWidth: recipe.doorWidth,
+    windows: recipe.windows,
+    roof: recipe.roof,
+    furnished: recipe.furnished,
+    structure: { ...recipe.structure, interior: project.structure.interior },
   };
 }

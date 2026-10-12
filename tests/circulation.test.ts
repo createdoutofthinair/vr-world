@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { preset, validateProject } from "../src/core/project";
+import { preset, validateProject, MeshData } from "../src/core/project";
 import { buildScene, moveWalker, canStand, box } from "../src/core/geometry";
 import {
   floorElevation,
@@ -132,4 +132,62 @@ test("Repeated apartment floors contain independent units and keep communal stai
     buildingTopology(p).rooms.filter((r) => r.type === "apartment").length,
     6,
   );
+});
+test("Walking rejects steep mesh ground while ordinary step risers remain supported", () => {
+  const plane: MeshData = {
+    id: "steep-ground",
+    label: "Steep ground",
+    category: "landscape",
+    material: "grass",
+    solid: true,
+    walkable: true,
+    surfaceMesh: true,
+    origin: [0, 0, 0],
+    positions: [0, 0, 0, 2, 4, 0, 2, 4, 2, 0, 0, 2],
+    uvs: [0, 0, 1, 0, 1, 1, 0, 1],
+    indices: [0, 2, 1, 0, 3, 2],
+  };
+  const position: [number, number, number] = [0.1, 1.88, 1];
+  assert.deepEqual(moveWalker(position, [0.05, 0], [plane]), position);
+  plane.positions = [0, 0, 0, 2, 0.8, 0, 2, 0.8, 2, 0, 0, 2];
+  const gentle = moveWalker([0.1, 1.72, 1], [0.05, 0], [plane]);
+  assert(gentle[0] > 0.1);
+  assert(Math.abs(gentle[1] - 1.74) < 1e-6);
+});
+test("Changing structural templates preserves authored world edits, assets and pinned landmarks", async () => {
+  const { DEFAULT_PROJECT, applyBuildingPreset } =
+    await import("../src/core/project");
+  const p = structuredClone(DEFAULT_PROJECT);
+  p.world.enabled = true;
+  p.terrain.edits = [
+    {
+      id: "sculpt-one",
+      x: 15,
+      z: 10,
+      radius: 2,
+      strength: 1,
+      kind: "raise",
+      layer: "soil",
+      locked: true,
+    },
+  ];
+  p.plantLandmarks = [
+    {
+      id: "landmark-one",
+      family: "shrub",
+      seed: 43,
+      x: 14,
+      z: 10,
+      scale: 1,
+      locked: false,
+    },
+  ];
+  const apartment = applyBuildingPreset(p, "flats");
+  assert.equal(apartment.archetype, "flats");
+  assert.equal(apartment.structure.storeys, 3);
+  assert.deepEqual(apartment.terrain, p.terrain);
+  assert.deepEqual(apartment.world, p.world);
+  assert.deepEqual(apartment.plantLandmarks, p.plantLandmarks);
+  assert.deepEqual(apartment.textures, p.textures);
+  assert.doesNotThrow(() => validateProject(apartment));
 });

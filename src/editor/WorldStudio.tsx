@@ -1,6 +1,6 @@
 import { useStudio } from "./store";
 import { cityPlan } from "../core/city";
-import { WorldSettings } from "../core/project";
+import { WorldSettings, THEMES } from "../core/project";
 export function WorldStudio() {
   const s = useStudio(),
     p = s.project,
@@ -101,6 +101,91 @@ export function WorldStudio() {
                 : `${plot.archetype} · ${plot.storeys} levels`}
             </small>
           </span>
+          <label className="field">
+            Use
+            <select
+              value={plot.park ? "park" : plot.archetype}
+              onChange={(e) => {
+                const kind = e.target.value;
+                change({
+                  locks: {
+                    ...p.world.locks,
+                    [plot.id]: {
+                      seed: plot.seed,
+                      archetype:
+                        kind === "park"
+                          ? plot.archetype
+                          : (kind as typeof plot.archetype),
+                      theme: plot.theme,
+                      storeys: plot.storeys,
+                      park: kind === "park",
+                    },
+                  },
+                });
+              }}
+            >
+              {["park", "shop", "house", "villa", "flats", "mixed"].map(
+                (kind) => (
+                  <option key={kind} value={kind}>
+                    {kind}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+          {!plot.park && (
+            <>
+              <label className="field">
+                Architecture
+                <select
+                  value={plot.theme}
+                  onChange={(e) =>
+                    change({
+                      locks: {
+                        ...p.world.locks,
+                        [plot.id]: {
+                          seed: plot.seed,
+                          archetype: plot.archetype,
+                          theme: e.target.value as typeof plot.theme,
+                          storeys: plot.storeys,
+                          park: false,
+                        },
+                      },
+                    })
+                  }
+                >
+                  {Object.entries(THEMES).map(([key, theme]) => (
+                    <option key={key} value={key}>
+                      {theme.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Storeys
+                <input
+                  type="number"
+                  min={1}
+                  max={4}
+                  value={plot.storeys}
+                  onChange={(e) =>
+                    change({
+                      locks: {
+                        ...p.world.locks,
+                        [plot.id]: {
+                          seed: plot.seed,
+                          archetype: plot.archetype,
+                          theme: plot.theme,
+                          storeys: Number(e.target.value),
+                          park: false,
+                        },
+                      },
+                    })
+                  }
+                />
+              </label>
+            </>
+          )}
           <button
             className="small-button"
             onClick={() => {

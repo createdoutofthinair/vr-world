@@ -2,7 +2,7 @@
 Not a WebGL, texture, UI, or native VP validation. Requires Pillow and NumPy.
 Usage: python3 scripts/render-review.py INPUT_DIRECTORY OUTPUT_DIRECTORY
 """
-import sys,json,math,pathlib
+import sys,json,math,pathlib,base64,io
 import numpy as np
 from PIL import Image,ImageDraw,ImageFilter
 source=pathlib.Path(sys.argv[1]);output=pathlib.Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=True)
@@ -18,19 +18,24 @@ for pattern,name in texture_files.items():
 for file in sorted(source.glob('*.json')):
     data=json.loads(file.read_text());p=data['project'];extent=p['landscape']['extent'];w=p['width'];d=p['depth']
     eye=np.array([w*1.2+extent,p['height']*2.1+extent*.9,d*1.55+extent*1.15]);target=np.array([0,p['height']*.65,0.])
+    if p['world']['enabled']:
+        spacing=p['world']['blockSize']+p['world']['roadWidth']+2*p['world']['sidewalkWidth'];distance=p['world']['blocks']*spacing*.95
+        eye=np.array([distance*.85,distance*.9,distance*1.15]);target=np.array([0,2,0.])
     forward=target-eye;forward/=np.linalg.norm(forward);right=np.cross(forward,[0.,1,0]);right/=np.linalg.norm(right);up=np.cross(right,forward)
     def project(v):
         rel=v-eye;z=rel@forward;return np.stack([W/2+(rel@right)/z*H*1.22,H/2-(rel@up)/z*H*1.22],axis=-1)*S
     colors={'temperate':('#c0d1d6','#e2e7df'),'desert':('#c8d1d6','#e8dac2'),'jungle':('#b8c8c3','#d8dfd1'),'fantasy':('#becbd0','#dce0d2'),'scifi':('#bac6d3','#d7d6df')}
     def rgb(c):return np.array([int(c[i:i+2],16) for i in (1,3,5)])
-    a,b=map(rgb,colors[file.stem]);background=np.zeros((int(H*S),int(W*S),3),dtype=np.uint8)
+    a,b=map(rgb,colors[p['theme']]);background=np.zeros((int(H*S),int(W*S),3),dtype=np.uint8)
     for y in range(background.shape[0]):background[y,:]=a*(1-y/background.shape[0])+b*(y/background.shape[0])
     image=Image.fromarray(background).convert('RGBA');draw=ImageDraw.Draw(image)
     light=np.array([-.48,.79,.39]);light/=np.linalg.norm(light)
     faces=[];terrain=[];shadows=[]
     for mesh in data['meshes']:
         v=np.array(mesh['positions']).reshape(-1,3)+np.array(mesh['origin']);idx=np.array(mesh['indices']).reshape(-1,3)
-        base=rgb(data['materials'][mesh['material']]['color']);opacity=data['materials'][mesh['material']]['opacity'];pattern=data['materials'][mesh['material']]['pattern'];uvs=np.array(mesh['uvs']).reshape(-1,2)
+        base=rgb(mesh.get('materialColor',data['materials'][mesh['material']]['color']));opacity=data['materials'][mesh['material']]['opacity'];pattern=data['materials'][mesh['material']]['pattern'];uvs=np.array(mesh['uvs']).reshape(-1,2)
+        if mesh.get('bakedTexture'):
+            pattern='baked:'+mesh['id'];textures[pattern]=np.array(Image.open(io.BytesIO(base64.b64decode(mesh['bakedTexture']['dataUrl'].split(',')[1]))).convert('RGB')).astype(float)/255
         projected=project(v)
         for tri in idx:
             vertices=v[tri];n=np.cross(vertices[1]-vertices[0],vertices[2]-vertices[0]);ln=np.linalg.norm(n)
@@ -43,7 +48,7 @@ for file in sorted(source.glob('*.json')):
             brightness=.43+.56*max(0,np.dot(n,light))+.08*max(0,n[1])
             color=tuple(np.clip(base*brightness,0,255).astype(int))+(255,)
             item=(float((center-eye)@forward),polygon,color,(vertices-eye)@forward,uvs[tri],pattern)
-            (terrain if mesh['id']=='site-ground' else faces).append(item)
+            (terrain if mesh.get('surfacePatch') or mesh['id']=='site-ground' else faces).append(item)
             if mesh['category'] not in ('site','landscape') and center[1]>.2:
                 projected_shadow=vertices.copy();projected_shadow[:,0]-=vertices[:,1]*light[0]/light[1];projected_shadow[:,2]-=vertices[:,1]*light[2]/light[1];projected_shadow[:,1]=-.008
                 shadows.append([tuple(q) for q in project(projected_shadow)])
@@ -67,8 +72,12 @@ for file in sorted(source.glob('*.json')):
             pixels[y0:y1+1,x0:x1+1][mask]=color
             if pattern in textures:
                 uv=(u[mask,None]*uvs[0]/depths[0]+v[mask,None]*uvs[1]/depths[1]+ww[mask,None]*uvs[2]/depths[2])*zz[mask,None]
-                tx=np.floor(uv[:,0]*512).astype(int)%512;ty=np.floor((1-uv[:,1])*512).astype(int)%512
-                shaded=np.array(color[:3])[None,:]*textures[pattern][ty,tx,None]
+                tex=textures[pattern];height,width=tex.shape[:2]
+                tx=np.floor(uv[:,0]*width).astype(int);ty=np.floor((1-uv[:,1])*height).astype(int)
+                if pattern.startswith('baked:'):tx=np.clip(tx,0,width-1);ty=np.clip(ty,0,height-1)
+                else:tx%=width;ty%=height
+                sample=tex[ty,tx] if tex.ndim==3 else tex[ty,tx,None]
+                shaded=np.array(color[:3])[None,:]*sample
                 pixels[y0:y1+1,x0:x1+1,:3][mask]=shaded.astype(np.uint8)
     raster(terrain)
     shadow=Image.new('L',image.size);sd=ImageDraw.Draw(shadow)

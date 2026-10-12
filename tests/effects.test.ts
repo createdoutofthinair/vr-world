@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { preset, MATERIAL_ROLES } from "../src/core/project";
-import { waterGraph } from "../src/core/effects";
+import { preset, MATERIAL_ROLES, DEFAULT_PROJECT } from "../src/core/project";
+import { waterGraph, buildEffects } from "../src/core/effects";
 import { terrainHeight, terrainDomain, channelX } from "../src/core/terrain";
-import { buildScene, moveWalker } from "../src/core/geometry";
+import { buildScene, moveWalker, bounds } from "../src/core/geometry";
 import { ActionRuntime } from "../src/core/actions";
 import { encodePNG, dataURL } from "../src/core/png";
 import { createPackage } from "../src/core/package";
@@ -104,4 +104,20 @@ test("Group pivots reassemble negative coordinates exactly and VP placement colu
     loaded = parseVPPTSV(tsv);
   assert.deepEqual(loaded[0].positionMeters, source[0].positionMeters);
   assert.equal(loaded[0].label, source[0].label);
+});
+test("City waterways partition into bounded local meshes without changing the directed route", () => {
+  const p = structuredClone(DEFAULT_PROJECT);
+  p.world.enabled = true;
+  p.world.blocks = 3;
+  p.effects.creek = true;
+  p.effects.trail = true;
+  const meshes = buildEffects(p).filter((m) => m.id.startsWith("creek-"));
+  assert(meshes.length > 8);
+  for (const mesh of meshes) {
+    const b = bounds(mesh);
+    assert(b.max[2] - b.min[2] <= 16.01);
+    assert(Math.max(...mesh.positions.map(Math.abs)) < 100);
+  }
+  const groups = partitionGroups(meshes);
+  assert(groups.every((g) => !g.oversize));
 });

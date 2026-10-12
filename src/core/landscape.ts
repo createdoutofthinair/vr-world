@@ -50,7 +50,12 @@ export function buildLandscape(p: Project): MeshData[] {
     );
   }
   parts.push(path.build("site-path", "Entrance path", "path", "landscape"));
-  const occupied: { x: number; z: number; radius: number }[] = [];
+  const occupied: { x: number; z: number; radius: number }[] =
+    p.plantLandmarks.map((plant) => ({
+      x: plant.x,
+      z: plant.z,
+      radius: 2.4 * plant.scale,
+    }));
   const place = (
     family: PlantFamily,
     x: number,
@@ -103,9 +108,9 @@ export function buildLandscape(p: Project): MeshData[] {
             ? ["cactus", "acacia", "cactus"]
             : ["acacia"]
         : p.biome === "woodland"
-          ? ["ancient", "broadleaf"]
+          ? ["ancient", "drooping", "broadleaf"]
           : p.biome === "alien"
-            ? ["alien"]
+            ? ["alien", "spiral"]
             : ["broadleaf", "conifer", "broadleaf"];
   const scatter = random(seedFor(p.seed, "tree-sites"));
   const count = Math.round(
@@ -142,13 +147,13 @@ export function buildLandscape(p: Project): MeshData[] {
       ? ["fern", "broadleaf-herb", "fern"]
       : p.biome === "arid"
         ? p.landscape.aridRecipe === "succulent"
-          ? ["agave", "cactus", "grass"]
-          : ["grass", "agave", "grass"]
+          ? ["agave", "pad-cactus", "cactus", "grass"]
+          : ["grass", "shrub", "agave", "grass"]
         : p.biome === "woodland"
-          ? ["fern", "fungi", "fern"]
+          ? ["fern", "fungi", "log", "stump"]
           : p.biome === "alien"
             ? ["agave", "fungi"]
-            : ["grass", "fern"];
+            : ["grass", "fern", "shrub"];
   const low = random(seedFor(p.seed, "understory-sites"));
   let placed = 0;
   const lowCount = Math.round(

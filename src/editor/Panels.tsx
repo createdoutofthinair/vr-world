@@ -16,12 +16,18 @@ import {
   ArrowUpRight,
   RotateCcw,
 } from "lucide-react";
+import {
+  createPortableProject,
+  readPortableProject,
+} from "../core/portable-project";
+import { LandmarkStudio } from "./LandmarkStudio";
 import { useStudio } from "./store";
 import {
   THEMES,
   Theme,
   MaterialRole,
   preset,
+  applyBuildingPreset,
   validateProject,
   BIOMES,
   Biome,
@@ -29,7 +35,7 @@ import {
   applyTheme,
 } from "../core/project";
 import { bounds } from "../core/geometry";
-import { download } from "../core/package";
+import { download, ExportScope } from "../core/package";
 import { readTexture, textureImage } from "../core/textures";
 import { materialsFor } from "../core/project";
 export function Explorer() {
@@ -143,7 +149,7 @@ export function Properties() {
   return (
     <div className="panel-pad properties">
       <div className="panel-eyebrow">
-        BUILDING RECIPE <span>v0.2</span>
+        BUILDING RECIPE <span>v0.3</span>
       </div>
       <label className="field">
         Project name
@@ -302,15 +308,27 @@ export function Presets() {
             title: "Garden villa",
             text: "A larger home with a terrace, pergola and distinct living and sleeping spaces.",
           },
+          {
+            type: "flats",
+            icon: Layers3,
+            title: "Apartment building",
+            text: "Three residential levels, common stairs and furnished units.",
+          },
+          {
+            type: "mixed",
+            icon: Store,
+            title: "Retail + apartments",
+            text: "Separate retail access and upper residential circulation.",
+          },
         ] as const
       ).map(({ type, icon: Icon, title, text }) => (
         <button
           key={type}
           className={`preset-card ${s.project.archetype === type ? "selected" : ""}`}
           onClick={() => {
-            s.replace(preset(type, s.project.theme));
+            s.replace(applyBuildingPreset(s.project, type));
             s.notify(
-              `${title} recipe loaded. Undo restores the previous project.`,
+              `${title} structural recipe loaded. World edits and uploaded assets retained; Undo restores the previous building.`,
             );
           }}
         >
@@ -565,6 +583,9 @@ export function FloorPlan() {
   const s = useStudio(),
     [activeLevel, setActiveLevel] = useState(0),
     p = s.project,
+    levels = p.world.enabled
+      ? Math.max(1, ...s.meshes.map((m) => (m.level ?? 0) + 1))
+      : p.structure.storeys,
     padding = 2,
     w = p.world.enabled
       ? Math.max(
@@ -587,15 +608,15 @@ export function FloorPlan() {
   return (
     <div className="floorplan">
       <div className="panel-eyebrow">
-        LEVEL {Math.min(activeLevel, p.structure.storeys - 1) + 1}{" "}
+        LEVEL {Math.min(activeLevel, levels - 1) + 1}{" "}
         <span>{(p.width * p.depth).toFixed(1)} m² footprint</span>
       </div>
       <select
         aria-label="Plan level"
-        value={Math.min(activeLevel, p.structure.storeys - 1)}
+        value={Math.min(activeLevel, levels - 1)}
         onChange={(e) => setActiveLevel(Number(e.target.value))}
       >
-        {Array.from({ length: p.structure.storeys }, (_, i) => (
+        {Array.from({ length: levels }, (_, i) => (
           <option key={i} value={i}>
             Level {i + 1}
           </option>
@@ -614,10 +635,7 @@ export function FloorPlan() {
               m.category !== "vegetation" &&
               m.category !== "landscape",
           )
-          .filter(
-            (m) =>
-              (m.level ?? 0) === Math.min(activeLevel, p.structure.storeys - 1),
-          )
+          .filter((m) => (m.level ?? 0) === Math.min(activeLevel, levels - 1))
           .map((m) => {
             const b = bounds(m),
               fill =
@@ -683,9 +701,20 @@ export function FloorPlan() {
   );
 }
 export function ExportPanel() {
+  const [scope, setScope] = useState<ExportScope>("all"),
+    [members, setMembers] = useState(128),
+    [extent, setExtent] = useState(40),
+    [triangles, setTriangles] = useState(30000),
+    [strict, setStrict] = useState(false);
   const s = useStudio(),
+    settings = {
+      scope,
+      selected: s.selected ? [s.selected] : [],
+      groupBudget: { members, horizontalExtent: extent, triangles },
+      rejectOversize: strict,
+    },
     downloadZip = async () => {
-      const b = await s.prepareExport();
+      const b = await s.prepareExport("canonical", settings);
       if (b)
         download(
           "c3-world-package.zip",
@@ -711,6 +740,64 @@ export function ExportPanel() {
           are pending.
         </span>
       </div>
+      <label className="field">
+        Export scope
+        <select
+          value={scope}
+          onChange={(e) => setScope(e.target.value as ExportScope)}
+        >
+          <option value="all">Entire generated scene</option>
+          <option value="building">Building structures and interiors</option>
+          <option value="environment">Site and environment</option>
+          <option value="selected">Selected mesh object</option>
+        </select>
+      </label>
+      <details>
+        <summary>Application group budgets</summary>
+        <p className="muted small">
+          These are your partitioning budgets, not verified native client
+          limits. Bounds include geometry and motion.
+        </p>
+        <label className="field">
+          Objects per group
+          <input
+            type="number"
+            min={1}
+            max={1024}
+            value={members}
+            onChange={(e) => setMembers(Number(e.target.value))}
+          />
+        </label>
+        <label className="field">
+          Horizontal extent (m)
+          <input
+            type="number"
+            min={10}
+            max={1000}
+            value={extent}
+            onChange={(e) => setExtent(Number(e.target.value))}
+          />
+        </label>
+        <label className="field">
+          Triangles per group
+          <input
+            type="number"
+            min={100}
+            max={1000000}
+            step={100}
+            value={triangles}
+            onChange={(e) => setTriangles(Number(e.target.value))}
+          />
+        </label>
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={strict}
+            onChange={(e) => setStrict(e.target.checked)}
+          />
+          Reject individually oversized meshes
+        </label>
+      </details>
       <button
         className="btn accent full"
         disabled={s.busy}
@@ -733,7 +820,7 @@ export function ExportPanel() {
         className="small-button full"
         disabled={s.busy}
         onClick={async () => {
-          const b = await s.prepareExport();
+          const b = await s.prepareExport("canonical", settings);
           if (b) {
             s.setView("export");
             s.setMode("orbit");
@@ -747,7 +834,7 @@ export function ExportPanel() {
         className="small-button full"
         disabled={s.busy || s.generating}
         onClick={async () => {
-          const b = await s.prepareExport("awg-probe");
+          const b = await s.prepareExport("awg-probe", settings);
           if (b) {
             s.setView("export");
             s.setMode("orbit");
@@ -796,19 +883,51 @@ export function ExportPanel() {
       >
         <Download size={14} /> Save editable project
       </button>
+      <button
+        className="small-button full"
+        onClick={async () => {
+          try {
+            const bytes = await createPortableProject(s.project);
+            download(
+              "c3-world.c3world.zip",
+              Uint8Array.from(bytes).buffer,
+              "application/zip",
+            );
+            s.notify(
+              "Portable project saved with deduplicated textures, PBR maps and sign artwork.",
+            );
+          } catch (error) {
+            s.notify((error as Error).message);
+          }
+        }}
+      >
+        Save asset-deduplicated project ZIP
+      </button>
       <label className="small-button full upload-button">
         <Upload size={14} /> Open project
         <input
           type="file"
-          accept=".json,.c3world"
+          accept=".json,.c3world,.zip"
           onChange={async (e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
             if (!file) return;
             try {
-              if (file.size > 15_000_000)
-                throw new Error("Project file exceeds 15 MB.");
-              s.replace(validateProject(JSON.parse(await file.text())));
+              if (file.name.toLowerCase().endsWith(".zip")) {
+                if (file.size > 100_000_000)
+                  throw new Error("Project ZIP exceeds 100 MB.");
+                s.replace(
+                  await readPortableProject(
+                    new Uint8Array(await file.arrayBuffer()),
+                  ),
+                );
+              } else {
+                if (file.size > 15_000_000)
+                  throw new Error(
+                    "JSON project exceeds 15 MB. Use the asset-deduplicated project ZIP for larger projects.",
+                  );
+                s.replace(validateProject(JSON.parse(await file.text())));
+              }
               s.notify("Project opened. Embedded textures restored.");
             } catch (err) {
               s.notify(`Could not open project: ${(err as Error).message}`);
@@ -884,7 +1003,7 @@ export function ThemesPanel() {
             }}
           >
             <img
-              src={`${import.meta.env.BASE_URL}scenes/c3-${id}.png`}
+              src={`${import.meta.env.BASE_URL}scenes/c3-${id}.webp`}
               alt={`${t.label} generated building and vegetation`}
               loading="lazy"
             />
@@ -1148,6 +1267,7 @@ export function PlantStudio() {
           </button>
         ))}
       </div>
+      <LandmarkStudio />
       <div className="form-section">Generated families</div>
       {[...families].map(([family, triangles]) => (
         <div className="plant-family-row" key={family}>
@@ -1164,7 +1284,8 @@ export function PlantStudio() {
       </div>
       <div className="panel-note">
         Growth, pruning and economy mesh settings are saved and exported.
-        Individual landmark overrides and custom species recipes remain pending.
+        Landmark pins retain individual growth snapshots. Custom species recipe
+        authoring remains pending.
       </div>
     </div>
   );

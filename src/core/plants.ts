@@ -5,23 +5,11 @@ import {
   seedFor,
   PlantSettings,
   DEFAULT_PLANTS,
+  PlantFamilyName,
 } from "./project";
 import { colonize } from "./colonization";
 import { MeshBuilder, addV, lerpV, mulV } from "./mesh";
-export type PlantFamily =
-  | "broadleaf"
-  | "canopy"
-  | "acacia"
-  | "ancient"
-  | "conifer"
-  | "palm"
-  | "fern"
-  | "broadleaf-herb"
-  | "agave"
-  | "cactus"
-  | "alien"
-  | "grass"
-  | "fungi";
+export type PlantFamily = PlantFamilyName;
 export interface PlantSkeleton {
   start: Vec3;
   end: Vec3;
@@ -46,7 +34,13 @@ export function generatePlant(
     leaves = new MeshBuilder(),
     light = new MeshBuilder();
   const skeleton: PlantSkeleton[] = [];
-  const woody = ["broadleaf", "canopy", "acacia", "ancient"].includes(family),
+  const woody = [
+      "broadleaf",
+      "canopy",
+      "acacia",
+      "ancient",
+      "drooping",
+    ].includes(family),
     crownScale =
       options.crown *
       (woody && options.age === "sapling"
@@ -106,7 +100,9 @@ export function generatePlant(
       return;
     (tone < 0.24 ? light : leaves).leaf(a, b, w, curl);
   };
-  if (["broadleaf", "canopy", "acacia", "ancient"].includes(family)) {
+  if (
+    ["broadleaf", "canopy", "acacia", "ancient", "drooping"].includes(family)
+  ) {
     const h =
       family === "canopy"
         ? 8.3
@@ -238,7 +234,30 @@ export function generatePlant(
             start[1] + (family === "acacia" ? 0.14 : 0.25 + r() * 0.4),
             start[2] + Math.sin(ba) * (0.6 + r() * 0.5),
           ];
-          branch([start, finish], [0.024, 0.007], parent, wood, 4);
+          const twig = branch([start, finish], [0.024, 0.007], parent, wood, 4);
+          if (family === "drooping") {
+            const chain = Array.from({ length: 5 }, (_, i) =>
+              addV(finish, [
+                Math.cos(ba) * i * 0.12,
+                -i * 0.35,
+                Math.sin(ba) * i * 0.12,
+              ]),
+            );
+            branch(chain, [0.014, 0.011, 0.008, 0.005, 0.002], twig, wood, 3);
+            for (let i = 1; i < chain.length; i++)
+              for (const side of [-1, 1])
+                leaf(
+                  chain[i],
+                  addV(chain[i], [
+                    Math.cos(ba + side) * 0.3,
+                    -0.25,
+                    Math.sin(ba + side) * 0.3,
+                  ]),
+                  0.12,
+                  0.025,
+                  f,
+                );
+          }
           for (let q = 0; q < (family === "acacia" ? 5 : 8); q++) {
             const at = lerpV(
                 start,
@@ -272,7 +291,16 @@ export function generatePlant(
           axis[Math.floor(y * 6) + 1],
           (y * 6) % 1,
         );
-        return addV(center, [Math.cos(a) * 0.32, 0, Math.sin(a) * 0.32]);
+        const radii = [0.35, 0.29, 0.23, 0.19, 0.15, 0.09, 0.025],
+          index = Math.floor(y * 6),
+          fraction = y * 6 - index,
+          radius =
+            ((radii[index] * (1 - fraction) + radii[index + 1] * fraction) *
+              1.3 *
+              trunkScale +
+              0.007) /
+            crownScale;
+        return addV(center, [Math.cos(a) * radius, 0, Math.sin(a) * radius]);
       });
       branch(
         vine,
@@ -441,6 +469,12 @@ export function generatePlant(
     }
   } else if (family === "cactus") {
     const h = 2.4 + r() * 0.8;
+    skeleton.push({
+      start: [0, -0.03, 0],
+      end: [0, h + 0.05, 0],
+      radius: 0.23,
+      parent: null,
+    });
     trunk.lathe(
       [
         [0, -0.03],
@@ -467,6 +501,156 @@ export function generatePlant(
         10,
       );
     }
+  } else if (family === "shrub" || family === "hedge") {
+    const stems = family === "hedge" ? 15 : options.age === "sapling" ? 4 : 8;
+    for (let j = 0; j < stems; j++) {
+      const x = family === "hedge" ? ((j % 5) - 2) * 0.46 : 0,
+        z = family === "hedge" ? (Math.floor(j / 5) - 1) * 0.35 : 0,
+        a = j * 2.39996,
+        h = 0.65 + r() * 0.65;
+      const end: Vec3 = [x + Math.cos(a) * 0.45, h, z + Math.sin(a) * 0.45];
+      const main = branch(
+        [[x, -0.03, z], [x + 0.03, h * 0.4, z], end],
+        [0.05, 0.025, 0.008],
+        null,
+        trunk,
+        5,
+      );
+      for (let k = 0; k < 4; k++) {
+        const at = lerpV([x + 0.03, h * 0.4, z], end, 0.15 + k * 0.2),
+          angle = a + k * 1.4,
+          tip = addV(at, [
+            Math.cos(angle) * 0.35,
+            0.12,
+            Math.sin(angle) * 0.35,
+          ]);
+        branch([at, tip], [0.012, 0.003], main, wood, 3);
+        for (let q = 0; q < 5; q++) {
+          const t = lerpV(at, tip, (q + 1) / 5),
+            aa = angle + (q % 2 ? 1 : -1);
+          leaf(
+            t,
+            addV(t, [Math.cos(aa) * 0.25, 0.04, Math.sin(aa) * 0.25]),
+            0.14,
+            0.04,
+          );
+        }
+      }
+    }
+  } else if (family === "pad-cactus") {
+    const segments: {
+      center: Vec3;
+      width: number;
+      height: number;
+      parent: number | null;
+    }[] = [{ center: [0, 0, 0], width: 0.38, height: 0.75, parent: null }];
+    const count =
+      options.age === "sapling" ? 3 : options.age === "old" ? 10 : 7;
+    for (let i = 0; i < count; i++) {
+      const pad = segments[i],
+        bottom = pad.center,
+        tip = addV(bottom, [0, pad.height, 0]);
+      skeleton.push({
+        start: bottom,
+        end: tip,
+        radius: pad.width * 0.25,
+        parent: pad.parent,
+      });
+      const mesh = new MeshBuilder();
+      mesh.lathe(
+        [
+          [0, 0],
+          [pad.width * 0.5, pad.height * 0.12],
+          [pad.width, pad.height * 0.45],
+          [pad.width * 0.85, pad.height * 0.8],
+          [0, pad.height],
+        ],
+        12,
+      );
+      const body = mesh.build(
+        "pad",
+        "Attached cactus pad",
+        "foliage",
+        "vegetation",
+        false,
+        bottom,
+      );
+      body.positions = body.positions.map((n, k) =>
+        k % 3 === 2 ? n * 0.2 : n,
+      );
+      trunk.merge(body);
+      if (segments.length < count) {
+        const side = i % 2 ? 1 : -1;
+        segments.push({
+          center: addV(bottom, [side * pad.width * 0.6, pad.height * 0.7, 0]),
+          width: pad.width * (0.78 + r() * 0.15),
+          height: pad.height * (0.82 + r() * 0.13),
+          parent: i,
+        });
+      }
+      if (i === 0 && segments.length < count)
+        segments.push({
+          center: addV(bottom, [-pad.width * 0.6, pad.height * 0.68, 0.01]),
+          width: pad.width * 0.85,
+          height: pad.height * 0.84,
+          parent: 0,
+        });
+    }
+  } else if (family === "spiral") {
+    const points: Vec3[] = Array.from({ length: 19 }, (_, i) => {
+      const t = i / 18,
+        a = t * Math.PI * 3;
+      return [Math.cos(a) * t * 0.6, t * 3.8, Math.sin(a) * t * 0.6];
+    });
+    branch(
+      points,
+      points.map((_, i) => 0.2 - i * 0.008),
+      null,
+      trunk,
+      7,
+    );
+    for (let i = 3; i < points.length; i += 2) {
+      const a = i * 0.7,
+        at = points[i];
+      leaf(
+        at,
+        addV(at, [Math.cos(a) * 0.9, 0.22, Math.sin(a) * 0.9]),
+        0.3,
+        0.18,
+      );
+    }
+  } else if (family === "log" || family === "stump") {
+    const points: Vec3[] =
+      family === "log"
+        ? [
+            [0, 0.35, 0],
+            [0.8, 0.32, 0.03],
+            [1.7, 0.29, -0.05],
+            [2.6, 0.25, 0],
+          ]
+        : [
+            [0, -0.03, 0],
+            [0.02, 0.25, 0],
+            [0.06, 0.7, 0.02],
+          ];
+    const radii =
+      family === "log" ? [0.3, 0.27, 0.23, 0.19] : [0.45, 0.32, 0.27];
+    branch(points, radii, null, trunk, options.quality === "economy" ? 6 : 9);
+    if (family === "stump")
+      for (let j = 0; j < 5; j++) {
+        const a = (j * Math.PI * 2) / 5;
+        branch(
+          [
+            [0, 0.18, 0],
+            [Math.cos(a) * 0.5, 0.04, Math.sin(a) * 0.5],
+            [Math.cos(a) * 0.8, -0.04, Math.sin(a) * 0.8],
+          ],
+          [0.13, 0.09, 0.015],
+          0,
+          wood,
+          5,
+        );
+      }
   } else if (family === "alien") {
     const main = branch(
       [
@@ -562,7 +746,7 @@ export function generatePlant(
     trunk.build(
       "trunk",
       `${family} · trunk`,
-      family === "cactus" ? "foliage" : "bark",
+      ["cactus", "pad-cactus"].includes(family) ? "foliage" : "bark",
       "vegetation",
       true,
     ),

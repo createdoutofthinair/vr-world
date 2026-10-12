@@ -2849,3 +2849,68 @@ h3 {
     max-width: 100%;
   }
 }
+
+.touch-navigation {
+  position: absolute;
+  bottom: 46px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  pointer-events: auto;
+  z-index: 5;
+}
+.touch-navigation button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  border: 1px solid #80988b;
+  border-radius: 8px;
+  background: #f6faf2;
+  color: #244b38;
+  touch-action: none;
+  user-select: none;
+}
+.touch-navigation small {
+  padding: 6px;
+  background: #f6faf2;
+  border-radius: 6px;
+}
+
+.reference-scene-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 30px;
+}
+.reference-scene-grid article {
+  overflow: hidden;
+  border: 1px solid #d9e2d5;
+  border-radius: 16px;
+  background: #fff;
+}
+.reference-scene-grid article img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+.reference-scene-grid article > div {
+  padding: 24px;
+}
+.reference-scene-grid h3 {
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+.reference-scene-grid p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #637467;
+}
+@media (max-width: 800px) {
+  .reference-scene-grid {
+    grid-template-columns: 1fr;
+  }
+}

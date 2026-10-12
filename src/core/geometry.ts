@@ -7,6 +7,7 @@ import { bakeTerrain } from "./terrain";
 import { buildMassing } from "./massing";
 import { buildEffects } from "./effects";
 import { buildModules } from "./modules";
+import { buildLandmarks } from "./landmarks";
 import { buildSigns } from "./signs";
 export interface Bounds {
   min: Vec3;
@@ -33,6 +34,7 @@ export function buildScene(p: Project, bake = true): MeshData[] {
     ...(p.world.enabled ? [] : buildSigns(p)),
     ...buildEffects(p),
   ];
+  parts.push(...buildLandmarks(p, parts));
   return bake ? bakeTerrain(p, parts) : parts;
 }
 function buildRawScene(p: Project): MeshData[] {
@@ -525,7 +527,12 @@ function nearby(meshes: MeshData[], x: number, z: number): MeshData[] {
   return [...result];
 }
 const groundIndex = new WeakMap<MeshData, Map<string, number[]>>();
-function triangleHeight(mesh: MeshData, x: number, z: number): number {
+function triangleHeight(
+  mesh: MeshData,
+  x: number,
+  z: number,
+  maxSlope = Infinity,
+): number {
   let grid = groundIndex.get(mesh);
   if (!grid) {
     grid = new Map();
@@ -564,6 +571,20 @@ function triangleHeight(mesh: MeshData, x: number, z: number): number {
     const ids = mesh.indices.slice(i, i + 3).map((n) => n * 3),
       xs = ids.map((n) => mesh.positions[n]),
       zs = ids.map((n) => mesh.positions[n + 2]);
+    if (Number.isFinite(maxSlope)) {
+      const ys = ids.map((n) => mesh.positions[n + 1]),
+        ux = xs[1] - xs[0],
+        uy = ys[1] - ys[0],
+        uz = zs[1] - zs[0],
+        vx = xs[2] - xs[0],
+        vy = ys[2] - ys[0],
+        vz = zs[2] - zs[0];
+      const normalX = uy * vz - uz * vy,
+        normalY = uz * vx - ux * vz,
+        normalZ = ux * vy - uy * vx;
+      if (Math.hypot(normalX, normalZ) > Math.abs(normalY) * maxSlope + 1e-8)
+        continue;
+    }
     const denominator =
       (zs[1] - zs[2]) * (xs[0] - xs[2]) + (xs[2] - xs[1]) * (zs[0] - zs[2]);
     const a =
@@ -639,7 +660,7 @@ export function moveWalker(
       if (m.id === "site-ground" || m.surfaceMesh) {
         if (xx < b.min[0] || xx > b.max[0] || zz < b.min[2] || zz > b.max[2])
           continue;
-        const height = triangleHeight(m, xx, zz);
+        const height = triangleHeight(m, xx, zz, 0.85);
         if (height <= y - 1.68 + 0.25) top = Math.max(top, height);
       } else {
         const closestX = Math.max(b.min[0], Math.min(xx, b.max[0])),
@@ -705,7 +726,9 @@ export function findWalkSpawn(
         ]);
       }
     for (const [x, z] of points) {
-      const height = mesh.surfaceMesh ? triangleHeight(mesh, x, z) : b.max[1];
+      const height = mesh.surfaceMesh
+        ? triangleHeight(mesh, x, z, 0.85)
+        : b.max[1];
       if (Number.isFinite(height) && canStand(x, z, height + 1.68, meshes))
         candidates.push([x, height + 1.68, z]);
     }

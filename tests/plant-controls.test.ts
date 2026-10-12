@@ -59,3 +59,34 @@ test("Walk spawn derives support and clearance from scene geometry including rai
   assert(spawn[1] >= 1.68);
   assert.equal(findWalkSpawn([], [0, 1.68, 0]), null);
 });
+test("Locked landmark variants survive seed/growth changes and conflicting placements are diagnosed", () => {
+  const p = structuredClone(DEFAULT_PROJECT);
+  p.landscape.extent = 12;
+  p.landscape.density = 0;
+  p.plantLandmarks = [
+    {
+      id: "landmark-one",
+      family: "pad-cactus",
+      seed: 923,
+      x: 12,
+      z: -8,
+      scale: 0.6,
+      locked: true,
+      recipe: structuredClone(DEFAULT_PLANTS),
+    },
+  ];
+  const a = buildScene(p, false).filter((m) => m.id.startsWith("landmark-one"));
+  assert(a.length > 0);
+  p.seed += 20;
+  p.plants.height = 1.7;
+  const b = buildScene(p, false).filter((m) => m.id.startsWith("landmark-one"));
+  assert.deepEqual(
+    b.map((m) => m.positions),
+    a.map((m) => m.positions),
+  );
+  p.plantLandmarks[0].x = 0;
+  p.plantLandmarks[0].z = 0;
+  assert.throws(() => buildScene(p, false), /conflicts with/);
+  p.plantLandmarks[0].x = 200;
+  assert.throws(() => buildScene(p, false), /owned parcel bounds/);
+});

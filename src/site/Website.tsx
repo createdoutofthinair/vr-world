@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/logo.svg";
 import { WorldIllustration } from "./WorldIllustration";
+import { REFERENCE_EXAMPLES } from "../core/examples";
 import { Theme, THEMES } from "../core/project";
 const features = [
   {
@@ -391,9 +392,41 @@ export function Website() {
             </div>
             <img
               className="generated-scene"
-              src={`${import.meta.env.BASE_URL}scenes/c3-${theme}.png`}
+              src={`${import.meta.env.BASE_URL}scenes/c3-${theme}.webp`}
               alt={`${THEMES[theme].label} architecture and procedural vegetation`}
             />
+          </div>
+        </section>
+        <section
+          className="section reference-scenes"
+          aria-labelledby="reference-scenes-title"
+        >
+          <div className="eyebrow dark">GENERATED SCENE REFERENCES</div>
+          <h2 id="reference-scenes-title">Build beyond a single room.</h2>
+          <p>
+            These software-rendered geometry previews come from saved generator
+            recipes. Open one to configure and walk through it in WebGL.
+          </p>
+          <div className="reference-scene-grid">
+            {REFERENCE_EXAMPLES.map((example) => (
+              <article key={example.id}>
+                <img
+                  loading="lazy"
+                  src={`${import.meta.env.BASE_URL}scenes/c3-${example.id}.webp`}
+                  alt={example.caption}
+                />
+                <div>
+                  <h3>{example.title}</h3>
+                  <p>{example.caption}</p>
+                  <a
+                    className="text-link"
+                    href={`#editor?example=${example.id}`}
+                  >
+                    Open editable scene <ArrowUpRight size={16} />
+                  </a>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
         <section id="workflow" className="section workflow-section">

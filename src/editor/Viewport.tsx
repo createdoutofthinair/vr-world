@@ -54,6 +54,7 @@ interface Runtime {
   frame: (buildingOnly?: boolean) => void;
   light: THREE.DirectionalLight;
   grid: THREE.GridHelper;
+  navigation?: Set<string>;
   actions?: ActionRuntime;
   bindings?: Map<string, THREE.Object3D>;
 }
@@ -64,10 +65,15 @@ export function Viewport() {
     current = useRef(s),
     [error, setError] = useState(""),
     [locked, setLocked] = useState(false),
+    [touch, setTouch] = useState(false),
+    touchActive = useRef(false),
+    cameraRestored = useRef(false),
+    skipInitialFrame = useRef(false),
     [showGrid, setShowGrid] = useState(false),
     [coords, setCoords] = useState("0.0, 0.0, 0.0"),
     [contextRevision, setContextRevision] = useState(0);
   current.current = s;
+  touchActive.current = touch;
   useEffect(() => {
     const host = container.current!;
     let renderer: THREE.WebGLRenderer;
@@ -92,6 +98,8 @@ export function Viewport() {
     const camera = new THREE.PerspectiveCamera(48, 1, 0.05, 200),
       orbit = new OrbitControls(camera, renderer.domElement),
       walk = new PointerLockControls(camera, renderer.domElement);
+    camera.rotation.order = "YXZ";
+    renderer.domElement.style.touchAction = "none";
     orbit.enableDamping = true;
     orbit.dampingFactor = 0.08;
     orbit.maxDistance = 90;
@@ -129,7 +137,7 @@ export function Viewport() {
           : state.meshes;
       const selected = buildingOnly
         ? meshes.filter((m) =>
-            ["structure", "interior", "detail"].includes(m.category),
+            ["structure", "windows", "roof", "interior"].includes(m.category),
           )
         : meshes;
       const box = new THREE.Box3();
@@ -143,6 +151,10 @@ export function Viewport() {
       const center = box.getCenter(new THREE.Vector3()),
         size = box.getSize(new THREE.Vector3());
       const distance = Math.max(size.x, size.z, size.y * 1.5) * 1.4;
+      if (scene.fog instanceof THREE.Fog) {
+        scene.fog.near = Math.max(55, distance * 0.9);
+        scene.fog.far = Math.max(140, distance * 2.5);
+      }
       camera.far = Math.max(200, distance * 5);
       camera.updateProjectionMatrix();
       orbit.maxDistance = Math.max(90, distance * 3);
@@ -166,6 +178,15 @@ export function Viewport() {
       grid,
     };
     frame();
+    const snapshot = current.current.cameraState.current;
+    if (snapshot && snapshot.mode === current.current.mode) {
+      camera.position.fromArray(snapshot.position);
+      orbit.target.fromArray(snapshot.target);
+      orbit.update();
+      camera.quaternion.fromArray(snapshot.quaternion);
+      cameraRestored.current = true;
+      skipInitialFrame.current = true;
+    }
     const resize = new ResizeObserver(() => {
       const { width, height } = host.getBoundingClientRect();
       if (width < 1 || height < 1) return;
@@ -175,6 +196,7 @@ export function Viewport() {
     });
     resize.observe(host);
     const keys = new Set<string>();
+    runtime.current.navigation = keys;
     const down = (e: KeyboardEvent) => {
         if (
           (e.target as HTMLElement).closest(
@@ -182,8 +204,11 @@ export function Viewport() {
           )
         )
           return;
-        if (walk.isLocked && !current.current.generating) {
-          if (e.code === "KeyE" && !e.repeat)
+        if (
+          (walk.isLocked || touchActive.current) &&
+          !current.current.generating
+        ) {
+          if (e.code === "KeyE" && !e.repeat && current.current.mode === "walk")
             current.current.interactDoor(camera.position.toArray() as Vec3);
           keys.add(e.code);
           if (
@@ -222,13 +247,31 @@ export function Viewport() {
     let px = 0,
       py = 0;
     const ray = new THREE.Raycaster();
+    let touchLook: [number, number] | null = null;
     const pointerDown = (e: PointerEvent) => {
+      if (touchActive.current && e.pointerType === "touch") {
+        touchLook = [e.clientX, e.clientY];
+        renderer.domElement.setPointerCapture(e.pointerId);
+      }
       px = e.clientX;
       py = e.clientY;
     };
+    const pointerMove = (e: PointerEvent) => {
+      if (!touchActive.current || !touchLook) return;
+      camera.rotation.y -= (e.clientX - touchLook[0]) * 0.005;
+      camera.rotation.x = Math.max(
+        -Math.PI / 2 + 0.05,
+        Math.min(
+          Math.PI / 2 - 0.05,
+          camera.rotation.x - (e.clientY - touchLook[1]) * 0.005,
+        ),
+      );
+      touchLook = [e.clientX, e.clientY];
+    };
     const pointerUp = (e: PointerEvent) => {
+      touchLook = null;
       if (
-        current.current.mode === "walk" ||
+        current.current.mode !== "orbit" ||
         Math.hypot(e.clientX - px, e.clientY - py) > 5
       )
         return;
@@ -252,8 +295,13 @@ export function Viewport() {
     };
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointerup", pointerUp);
+    renderer.domElement.addEventListener("pointermove", pointerMove);
+    renderer.domElement.addEventListener("pointercancel", pointerUp);
     const lost = (e: Event) => {
       e.preventDefault();
+      walk.unlock();
+      keys.clear();
+      setTouch(false);
       setError("Graphics context interrupted. Waiting for recovery…");
     };
     const restored = () => {
@@ -294,10 +342,10 @@ export function Viewport() {
             setError((error as Error).message);
           }
         }
-      if (walk.isLocked && !state.generating) {
+      if ((walk.isLocked || touchActive.current) && !state.generating) {
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
-        forward.y = 0;
+        if (state.mode !== "fly") forward.y = 0;
         forward.normalize();
         const right = new THREE.Vector3().crossVectors(forward, camera.up);
         let f =
@@ -314,15 +362,23 @@ export function Viewport() {
           state.view === "export" && state.bundle
             ? state.bundle.meshes
             : state.meshes;
-        const moved = moveWalker(
-          camera.position.toArray() as Vec3,
-          [
-            (forward.x * f + right.x * r) * speed,
-            (forward.z * f + right.z * r) * speed,
-          ],
-          meshes,
-        );
-        camera.position.fromArray(moved);
+        if (state.mode === "fly") {
+          camera.position
+            .addScaledVector(forward, f * speed)
+            .addScaledVector(right, r * speed);
+          camera.position.y +=
+            ((keys.has("KeyE") ? 1 : 0) - (keys.has("KeyQ") ? 1 : 0)) * speed;
+        } else {
+          const moved = moveWalker(
+            camera.position.toArray() as Vec3,
+            [
+              (forward.x * f + right.x * r) * speed,
+              (forward.z * f + right.z * r) * speed,
+            ],
+            meshes,
+          );
+          camera.position.fromArray(moved);
+        }
       } else if (orbit.enabled) orbit.update();
       if (now - tick > 200) {
         setCoords(
@@ -359,6 +415,17 @@ export function Viewport() {
       }
     });
     return () => {
+      current.current.cameraState.current = {
+        position: camera.position.toArray() as Vec3,
+        target: orbit.target.toArray() as Vec3,
+        quaternion: camera.quaternion.toArray() as [
+          number,
+          number,
+          number,
+          number,
+        ],
+        mode: current.current.mode,
+      };
       renderer.setAnimationLoop(null);
       walk.unlock();
       resize.disconnect();
@@ -367,6 +434,8 @@ export function Viewport() {
       window.removeEventListener("blur", blur);
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
       renderer.domElement.removeEventListener("pointerup", pointerUp);
+      renderer.domElement.removeEventListener("pointermove", pointerMove);
+      renderer.domElement.removeEventListener("pointercancel", pointerUp);
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       renderer.domElement.removeEventListener("webglcontextrestored", restored);
       walk.dispose();
@@ -576,7 +645,19 @@ export function Viewport() {
   useEffect(() => {
     const rt = runtime.current;
     if (!rt) return;
-    if (s.mode === "walk") {
+    setTouch(false);
+    rt.navigation?.clear();
+    if (cameraRestored.current) {
+      cameraRestored.current = false;
+      rt.orbit.enabled = s.mode === "orbit";
+      return;
+    }
+    if (s.mode !== "orbit") {
+      if (rt.scene.fog instanceof THREE.Fog) {
+        rt.scene.fog.near = s.mode === "fly" ? 80 : 55;
+        rt.scene.fog.far =
+          s.mode === "fly" ? Math.max(300, rt.camera.far * 0.6) : 140;
+      }
       rt.walk.unlock();
       rt.orbit.enabled = false;
       const meshes =
@@ -593,6 +674,7 @@ export function Viewport() {
         return;
       }
       rt.camera.position.fromArray(spawn);
+      if (s.mode === "fly") rt.camera.position.y += 4;
       rt.camera.lookAt(0, 1.66, 0);
     } else {
       rt.walk.unlock();
@@ -620,7 +702,8 @@ export function Viewport() {
     rt.scene.background = sky;
     rt.scene.fog = new THREE.Fog(biome.fog, 55, 140);
     rt.light.color.set(biome.sun);
-    if (s.mode === "orbit") rt.frame();
+    if (skipInitialFrame.current) skipInitialFrame.current = false;
+    else if (s.mode === "orbit") rt.frame();
   }, [
     s.renderProject.biome,
     s.renderProject.landscape.extent,
@@ -629,6 +712,17 @@ export function Viewport() {
     s.renderProject.world.blocks,
     s.renderProject.world.blockSize,
   ]);
+  const lastPreview = useRef({ view: s.view, bundle: s.bundle });
+  useEffect(() => {
+    const previous = lastPreview.current;
+    lastPreview.current = { view: s.view, bundle: s.bundle };
+    if (
+      s.mode === "orbit" &&
+      (previous.view !== s.view ||
+        (s.view === "export" && previous.bundle !== s.bundle))
+    )
+      runtime.current?.frame();
+  }, [s.view, s.bundle]);
   useEffect(() => {
     if (runtime.current) runtime.current.grid.visible = showGrid;
   }, [showGrid]);
@@ -660,6 +754,13 @@ export function Viewport() {
             <PersonStanding size={15} /> Walk
           </button>
         </div>
+        <button
+          className={s.mode === "fly" ? "tool active" : "tool"}
+          onClick={() => s.setMode("fly")}
+          title="Fly inspection has no collision"
+        >
+          Fly
+        </button>
         <button
           className={s.cutaway ? "tool active" : "tool"}
           onClick={() => s.setCutaway(!s.cutaway)}
@@ -701,7 +802,8 @@ export function Viewport() {
         {s.view === "export" ? "EXPORTED RWX" : "LIVE AUTHORING"}
         <span>
           {" "}
-          / {s.project.theme.toUpperCase()} · {s.project.biome.toUpperCase()}
+          / {s.renderProject.theme.toUpperCase()} ·{" "}
+          {s.renderProject.biome.toUpperCase()}
         </span>
       </div>
       <div className="axis-compass">
@@ -709,18 +811,79 @@ export function Viewport() {
         <i />
         <small>X · Z</small>
       </div>
-      {s.mode === "walk" && !locked && !error && (
+      {s.mode !== "orbit" && !locked && !touch && !error && (
         <div className="walk-prompt">
           <PersonStanding size={28} />
-          <h3>Step inside your creation.</h3>
+          <h3>
+            {s.mode === "fly"
+              ? "Fly through the scene."
+              : "Step inside your creation."}
+          </h3>
           <p>
             WASD to move · mouse to look · Shift to run
             <br />
-            Esc releases the cursor. Flat-ground collision enabled.
+            {s.mode === "fly"
+              ? "Q/E: down/up. Fly inspection has no collision."
+              : "E: doors. Step, slope and headroom collision enabled."}{" "}
+            Esc releases the cursor.
           </p>
           <button className="btn accent" onClick={beginWalk}>
-            Enter walk mode <Crosshair size={16} />
+            Capture mouse <Crosshair size={16} />
           </button>
+          <button className="small-button" onClick={() => setTouch(true)}>
+            Use touch controls
+          </button>
+        </div>
+      )}
+      {touch && s.mode !== "orbit" && (
+        <div className="touch-navigation" aria-label="Touch navigation">
+          {[
+            ["KeyA", "Left"],
+            ["KeyW", "Forward"],
+            ["KeyS", "Back"],
+            ["KeyD", "Right"],
+            ...(s.mode === "fly"
+              ? [
+                  ["KeyQ", "Down"],
+                  ["KeyE", "Up"],
+                ]
+              : []),
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                runtime.current?.navigation?.add(key);
+              }}
+              onPointerUp={() => runtime.current?.navigation?.delete(key)}
+              onPointerCancel={() => runtime.current?.navigation?.delete(key)}
+              onLostPointerCapture={() =>
+                runtime.current?.navigation?.delete(key)
+              }
+            >
+              {label}
+            </button>
+          ))}
+          {s.mode === "walk" && (
+            <button
+              onClick={() => {
+                const rt = runtime.current;
+                if (rt) s.interactDoor(rt.camera.position.toArray() as Vec3);
+              }}
+            >
+              Door
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setTouch(false);
+              runtime.current?.navigation?.clear();
+            }}
+          >
+            Exit
+          </button>
+          <small>Drag scene to look</small>
         </div>
       )}
       {locked && (
@@ -740,7 +903,11 @@ export function Viewport() {
         </span>
         <span>{coords} m</span>
         <span>
-          {locked ? "WASD · Esc to exit" : "Drag to orbit · wheel to zoom"}
+          {touch
+            ? "Touch controls · drag to look"
+            : locked
+              ? "WASD · Esc to exit"
+              : "Drag to orbit · wheel to zoom"}
         </span>
       </div>
     </div>

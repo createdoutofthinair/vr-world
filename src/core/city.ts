@@ -310,6 +310,12 @@ export function buildCity(
         );
         const x = plot.x + (rng() - 0.5) * 8,
           z = plot.z + (rng() - 0.5) * 8;
+        if (
+          p.plantLandmarks.some(
+            (pin) => Math.hypot(pin.x - x, pin.z - z) < 3 * pin.scale,
+          )
+        )
+          continue;
         for (const m of plant.meshes)
           parts.push({
             ...m,
@@ -328,11 +334,16 @@ export function buildCity(
     }
     recipe.seed = plot.seed;
     recipe.textures = p.textures;
+    recipe.materialOptions = p.materialOptions;
     recipe.surfaceSource = p.surfaceSource;
     recipe.structure = {
       ...recipe.structure,
       storeys: plot.storeys,
       doorAngle: p.structure.doorAngle,
+      interior: p.structure.interior,
+      windowWidth: p.structure.windowWidth,
+      windowHeight: p.structure.windowHeight,
+      windowSill: p.structure.windowSill,
       doorPoses: Object.fromEntries(
         Object.entries(p.structure.doorPoses)
           .filter(

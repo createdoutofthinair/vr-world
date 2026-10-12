@@ -11,7 +11,8 @@
       "id": "M1",
       "title": "Application shell and document foundation",
       "state": "partial",
-      "externalProofPending": false
+      "externalProofPending": false,
+      "evidence": "tests/persistence.test.ts; deduplicated asset/project reconstruction and portable ZIP restoration; actual browser storage pending"
     },
     {
       "id": "M2",
@@ -36,7 +37,8 @@
       "id": "M5",
       "title": "Materials and export hardening",
       "state": "partial",
-      "externalProofPending": true
+      "externalProofPending": true,
+      "evidence": "tests/package.test.ts; selected scopes, strict group budgets, model/texture hashes, SVG plans and CSV inventory; native profile unverified"
     },
     {
       "id": "M6",
@@ -225,7 +227,7 @@
       "exit": "Recognizable silhouettes, complete attachments, quality/budget controls",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "tests/environment.test.ts; thirteen families"
+      "evidence": "tests/environment.test.ts; twenty distinct families and acyclic skeletons; full age/visual acceptance pending"
     },
     {
       "id": "E3",
@@ -234,7 +236,7 @@
       "exit": "Repeatable mixed-theme parcel with editable density and preserved locks",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "theme/biome separation and growth recipe; masks/pins pending"
+      "evidence": "theme/biome separation and locked individual landmark recipes; biome masks and ecological fields pending"
     },
     {
       "id": "E4",

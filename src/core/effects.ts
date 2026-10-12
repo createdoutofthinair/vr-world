@@ -53,9 +53,55 @@ export function waterGraph(p: Project): WaterGraph {
 export function buildEffects(p: Project): MeshData[] {
   if (!p.effects.creek) return [];
   const graph = waterGraph(p),
-    parts: MeshData[] = [],
-    water = new MeshBuilder(),
+    parts: MeshData[] = [];
+  let water = new MeshBuilder(),
+    trail = new MeshBuilder(),
+    chunk = 0;
+  const flush = () => {
+    if (!water.indices.length) return;
+    const creek = water.build(
+      `creek-water-${chunk}`,
+      "Continuous creek and waterfall curtain",
+      "water",
+      "landscape",
+      false,
+    );
+    const rebase = (mesh: MeshData) => {
+      let minX = Infinity,
+        maxX = -Infinity,
+        minZ = Infinity,
+        maxZ = -Infinity;
+      for (let i = 0; i < mesh.positions.length; i += 3) {
+        minX = Math.min(minX, mesh.positions[i]);
+        maxX = Math.max(maxX, mesh.positions[i]);
+        minZ = Math.min(minZ, mesh.positions[i + 2]);
+        maxZ = Math.max(maxZ, mesh.positions[i + 2]);
+      }
+      const x = (minX + maxX) / 2,
+        z = (minZ + maxZ) / 2;
+      mesh.origin = [x, 0, z];
+      mesh.positions = mesh.positions.map(
+        (n, i) => n - (i % 3 === 0 ? x : i % 3 === 2 ? z : 0),
+      );
+      return mesh;
+    };
+    parts.push(rebase(creek));
+    if (trail.indices.length) {
+      const mesh = trail.build(
+        `creek-trail-${chunk}`,
+        "Connected bank trail",
+        "path",
+        "landscape",
+        true,
+      );
+      mesh.surfaceMesh = true;
+      mesh.walkable = true;
+      parts.push(rebase(mesh));
+    }
+    chunk++;
+    water = new MeshBuilder();
     trail = new MeshBuilder();
+  };
   for (let i = 1; i < graph.nodes.length; i++) {
     const a = graph.nodes[i - 1].position,
       b = graph.nodes[i].position;
@@ -79,28 +125,9 @@ export function buildEffects(p: Project): MeshData[] {
         [x0 - 0.65, terrainHeight(p, x0 - 0.65, a[2]) + 0.012, a[2]],
       ]);
     }
+    if (i % 8 === 0) flush();
   }
-  parts.push(
-    water.build(
-      "creek-water",
-      "Continuous creek and waterfall curtain",
-      "water",
-      "landscape",
-      false,
-    ),
-  );
-  if (trail.indices.length) {
-    const m = trail.build(
-      "creek-trail",
-      "Connected bank trail",
-      "path",
-      "landscape",
-      true,
-    );
-    m.surfaceMesh = true;
-    m.walkable = true;
-    parts.push(m);
-  }
+  flush();
   for (let i = 4; i < graph.nodes.length - 4; i += 7)
     for (const side of [-1, 1]) {
       const node = graph.nodes[i].position,

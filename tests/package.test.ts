@@ -68,3 +68,74 @@ test("Changed texture bytes are detected by their package hash", async () => {
     /hash mismatch/,
   );
 });
+test("Selected scope preserves exactly the requested placement and complete texture closure", async () => {
+  const p = fixture(),
+    scene = buildScene(p),
+    id = scene.find((m) => m.category === "windows")!.id;
+  const b = await createPackage(p, {
+    scope: "selected",
+    selected: [id],
+    groupBudget: { members: 1, horizontalExtent: 40, triangles: 30000 },
+    rejectOversize: true,
+  });
+  assert.deepEqual(
+    b.meshes.map((m) => m.id),
+    [id],
+  );
+  assert.deepEqual(b.manifest.scope, { mode: "selected", ids: [id] });
+  assert.equal(b.textureCount, 1);
+  const zip = await JSZip.loadAsync(b.bytes),
+    groups = JSON.parse(await zip.file("c3-groups.json")!.async("string"));
+  assert.equal(groups.budget.members, 1);
+  assert.equal(groups.budgetIsNativeLimit, false);
+  assert.equal(groups.groups.length, 1);
+  await assert.rejects(
+    createPackage(p, { scope: "selected", selected: ["missing-object"] }),
+    /contains no|stale/,
+  );
+});
+test("Strict group budget rejects an oversized mesh rather than silently omitting geometry", async () => {
+  const p = fixture(),
+    id = buildScene(p).find((m) => m.id === "site-ground" || m.surfaceMesh)!.id;
+  await assert.rejects(
+    createPackage(p, {
+      scope: "selected",
+      selected: [id],
+      groupBudget: { members: 1, horizontalExtent: 10, triangles: 100 },
+      rejectOversize: true,
+    }),
+    /individual mesh assets exceed/,
+  );
+});
+test("Package reconstruction rejects changed model bytes and unsafe or duplicate manifest placements", async () => {
+  const p = fixture(),
+    id = buildScene(p).find((m) => m.category === "windows")!.id,
+    b = await createPackage(p, { scope: "selected", selected: [id] });
+  const zip = await JSZip.loadAsync(b.bytes),
+    path = Object.values(b.manifest.models)[0];
+  zip.file(
+    path,
+    (await zip.file(path)!.async("string")).replace("Vertex ", "Vertex 1 "),
+  );
+  await assert.rejects(
+    readProducedPackage(await zip.generateAsync({ type: "uint8array" })),
+    /Model hash mismatch/,
+  );
+  const unsafe = await JSZip.loadAsync(b.bytes);
+  b.manifest.models[b.manifest.placements[0].model] = "../external.rwx";
+  unsafe.file("c3-manifest.json", JSON.stringify(b.manifest));
+  await assert.rejects(
+    readProducedPackage(await unsafe.generateAsync({ type: "uint8array" })),
+    /Unsafe model path/,
+  );
+  const duplicate = await JSZip.loadAsync(b.bytes),
+    manifest = JSON.parse(
+      await duplicate.file("c3-manifest.json")!.async("string"),
+    );
+  manifest.placements.push(manifest.placements[0]);
+  duplicate.file("c3-manifest.json", JSON.stringify(manifest));
+  await assert.rejects(
+    readProducedPackage(await duplicate.generateAsync({ type: "uint8array" })),
+    /duplicate placement/,
+  );
+});

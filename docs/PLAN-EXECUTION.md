@@ -55,4 +55,6 @@ The complete specification remains authoritative. Partial implementation and aut
 
 ## 0.3 execution checkpoint — 12 October 2026
 
-Substantial implementations now exist for M4/M6–M10, C0–C4, T1–T5 and E1–E6. All remain partial where their full acceptance includes unfinished controls, visual review or native proof. The table above records the starting state; current states and evidence live in `PLAN-COVERAGE.json`. The detailed implementation and remaining work are recorded in `../IMPLEMENTATION-STATUS.md`. Automated tests: 49 passing; production build passing. No browser/GPU/native acceptance is inferred.
+Substantial implementations now exist for M4/M6–M10, C0–C4, T1–T5 and E1–E6. All remain partial where their full acceptance includes unfinished controls, visual review or native proof. The table above records the starting state; current states and evidence live in `PLAN-COVERAGE.json`. The detailed implementation and remaining work are recorded in `../IMPLEMENTATION-STATUS.md`. Automated tests: 59 passing; production build passing. No browser/GPU/native acceptance is inferred.
+
+The subsequent checkpoint adds 20 plant families, locked individual plant recipes, per-plot template controls, scope/budget export controls, SVG geometry plans/inventory, portable deduplicated project ZIPs, archive/model validation, touch/fly navigation and view snapshots. Software renders are inspected separately from the still-pending GPU/native gates.

@@ -17,11 +17,12 @@ import {
   materialsFor,
   MATERIAL_ROLES,
 } from "../core/project";
-import { ExportBundle } from "../core/package";
+import { ExportBundle, ExportSettings } from "../core/package";
 import {
   loadStandardTextures,
   standardSnapshot,
 } from "../core/standard-textures";
+import { referenceExample } from "../core/examples";
 import { textureImage } from "../core/textures";
 import { loadProject, saveProject } from "../core/persistence";
 interface History {
@@ -29,7 +30,14 @@ interface History {
   present: Project;
   future: Project[];
 }
+export interface CameraSnapshot {
+  position: [number, number, number];
+  target: [number, number, number];
+  quaternion: [number, number, number, number];
+  mode: "orbit" | "walk" | "fly";
+}
 interface StudioStore {
+  cameraState: { current: CameraSnapshot | null };
   simulation: SimulationClock;
   setSimulation: (patch: Partial<SimulationClock>) => void;
   project: Project;
@@ -46,13 +54,14 @@ interface StudioStore {
   canRedo: boolean;
   cutaway: boolean;
   setCutaway: (v: boolean) => void;
-  mode: "orbit" | "walk";
-  setMode: (m: "orbit" | "walk") => void;
+  mode: "orbit" | "walk" | "fly";
+  setMode: (m: "orbit" | "walk" | "fly") => void;
   view: "authoring" | "export";
   setView: (v: "authoring" | "export") => void;
   bundle: ExportBundle | null;
   prepareExport: (
     mode?: "canonical" | "awg-probe",
+    settings?: ExportSettings,
   ) => Promise<ExportBundle | null>;
   busy: boolean;
   cancelExport: () => void;
@@ -93,9 +102,14 @@ function initial(): Project {
       localStorage.getItem("c3-project-v1");
     if (s) p = validateProject(JSON.parse(s));
   } catch {}
-  const theme = new URLSearchParams(location.hash.split("?")[1] ?? "").get(
-    "theme",
+  return launchProject(
+    p,
+    new URLSearchParams(location.hash.split("?")[1] ?? ""),
   );
+}
+function launchProject(saved: Project, params: URLSearchParams): Project {
+  let p = referenceExample(params.get("example")) ?? saved;
+  const theme = params.get("theme");
   if (
     theme &&
     ["temperate", "desert", "jungle", "fantasy", "scifi"].includes(theme)
@@ -103,6 +117,7 @@ function initial(): Project {
     p = { ...p, ...applyTheme(p, theme as Project["theme"]) };
   return p;
 }
+
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<History>(() => ({
       past: [],
@@ -111,7 +126,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     })),
     [selected, select] = useState<string | null>(null),
     [cutaway, setCutaway] = useState(false),
-    [mode, setMode] = useState<"orbit" | "walk">("orbit"),
+    [mode, setMode] = useState<"orbit" | "walk" | "fly">("orbit"),
     [view, setView] = useState<"authoring" | "export">("authoring"),
     [bundle, setBundle] = useState<ExportBundle | null>(null),
     [busy, setBusy] = useState(false),
@@ -296,6 +311,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       next ? "Door opened · simulation pose" : "Door closed · simulation pose",
     );
   };
+  const cameraState = useRef<CameraSnapshot | null>(null);
   const latest = useRef(project);
   const edited = useRef(false),
     saveQueue = useRef(Promise.resolve());
@@ -305,20 +321,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     loadProject()
       .then((saved) => {
         if (active && saved && !edited.current) {
-          const requestedTheme = new URLSearchParams(
-            location.hash.split("?")[1] ?? "",
-          ).get("theme");
-          const restored =
-            requestedTheme &&
-            ["temperate", "desert", "jungle", "fantasy", "scifi"].includes(
-              requestedTheme,
-            )
-              ? {
-                  ...saved,
-                  ...applyTheme(saved, requestedTheme as Project["theme"]),
-                }
-              : saved;
-          setHistory({ past: [], present: restored, future: [] });
+          const params = new URLSearchParams(location.hash.split("?")[1] ?? ""),
+            restored = launchProject(saved, params);
+          setHistory({
+            past: params.has("example") ? [saved] : [],
+            present: restored,
+            future: [],
+          });
           notify("Recovered project and embedded assets from browser storage.");
         }
       })
@@ -329,7 +338,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           );
       })
       .finally(() => {
-        if (active) setHydrated(true);
+        if (active) {
+          const params = new URLSearchParams(location.hash.split("?")[1] ?? "");
+          if (params.has("example") || params.has("theme"))
+            window.history.replaceState(null, "", "#editor");
+          setHydrated(true);
+        }
       });
     return () => {
       active = false;
@@ -428,6 +442,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   );
   const prepareExport = async (
     mode: "canonical" | "awg-probe" = "canonical",
+    settings: ExportSettings = {},
   ) => {
     if (
       busy ||
@@ -475,6 +490,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           reject(new Error("Export worker failed; previous package retained."));
         };
         worker.postMessage({
+          settings,
           mode,
           project,
           standards: standardSnapshot(),
@@ -505,6 +521,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       value={{
         project,
         meshes,
+        cameraState,
         selected,
         select,
         update,

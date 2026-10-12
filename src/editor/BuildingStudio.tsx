@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useStudio } from "./store";
 import { buildingTopology, floorElevation, stairPlan } from "../core/building";
-import { Project, preset } from "../core/project";
+import { Project, applyBuildingPreset } from "../core/project";
 export function BuildingStudio() {
   const s = useStudio(),
     p = s.project,
@@ -46,10 +46,9 @@ export function BuildingStudio() {
         <select
           value={p.archetype}
           onChange={(e) =>
-            s.replace({
-              ...preset(e.target.value as Project["archetype"], p.theme),
-              textures: p.textures,
-            })
+            s.replace(
+              applyBuildingPreset(p, e.target.value as Project["archetype"]),
+            )
           }
         >
           <option value="shop">Shop</option>

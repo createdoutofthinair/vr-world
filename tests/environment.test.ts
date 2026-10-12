@@ -29,6 +29,13 @@ const families: PlantFamily[] = [
   "alien",
   "grass",
   "fungi",
+  "shrub",
+  "hedge",
+  "pad-cactus",
+  "drooping",
+  "spiral",
+  "log",
+  "stump",
 ];
 test("Every plant family has finite nondegenerate attached geometry within its budget", () => {
   const fingerprints = new Set<string>();
@@ -37,11 +44,11 @@ test("Every plant family has finite nondegenerate attached geometry within its b
     const tris = plant.meshes.reduce((n, m) => n + m.indices.length / 3, 0);
     assert(tris > 0 && tris < 18000, `${family}: ${tris} triangles`);
     fingerprints.add(JSON.stringify(plant.meshes.map((m) => m.positions)));
-    for (const bone of plant.skeleton) {
+    for (const [boneIndex, bone] of plant.skeleton.entries()) {
       assert(bone.radius > 0);
       if (bone.parent !== null)
         assert(
-          bone.parent >= 0 && bone.parent < plant.skeleton.length,
+          bone.parent >= 0 && bone.parent < boneIndex,
           `${family} invalid parent`,
         );
     }
