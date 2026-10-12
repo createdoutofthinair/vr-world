@@ -77,3 +77,9 @@ Public routes remain https://createdoutofthinair.github.io/vr-world/ and https:/
 ## Next work
 
 Continue the full execution ledger: per-unit/facade overrides and richer room topology, city graph/district/viaduct tools, biome masks and custom vegetation recipes, streaming/LOD and remaining secondary outputs, then current visual/browser and native target acceptance. Do not label this checkpoint the completed plan.
+
+## Multiplayer architecture documentation
+
+Added the integrated `#architecture` route, main website navigation entry, 23 decision chapters, three inline SVG architecture diagrams, searchable chapter navigation, print/download controls and a browser-local decision notebook. Content covers proposed shared Rust/WASM Rapier simulation, collision-only server assets, memory/streaming, prediction/reconciliation, animation authority, protocol, containers, security and release gates. The c3 integration chapter explicitly preserves semantic/geometry/export boundaries and identifies the existing walkthrough as separate from the proposed physics core. No Rust server, Rapier runtime, deterministic parity or performance capacity is implemented or certified by this documentation. Next task: pin the engine/toolchain and prove native/WASM parity in an isolated representative collision scene before runtime integration. Browser/GPU inspection remains pending.
+
+Verification for this documentation change: all 85 automated tests pass; TypeScript and production Vite build pass. Architecture content loads as a separate lazy bundle. Browser visual checks and interactive notebook/print checks have not been performed.

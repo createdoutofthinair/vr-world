@@ -100,6 +100,9 @@ export function Website() {
             <a href="#workflow" onClick={() => setMenu(false)}>
               How it works
             </a>
+            <a href="#architecture" onClick={() => setMenu(false)}>
+              Architecture
+            </a>
             <a href="#roadmap" onClick={() => setMenu(false)}>
               Roadmap
             </a>
