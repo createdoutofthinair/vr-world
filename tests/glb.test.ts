@@ -66,9 +66,7 @@ test("GLB preserves metre placements, instancing, winding and physical UVs in it
   assert(values(primitive.attributes.NORMAL).every(Number.isFinite));
   const scale = materialsFor(p).wall.scale ?? 1;
   values(primitive.attributes.TEXCOORD_0).forEach((v, i) =>
-    assert(
-      Math.abs(v - (i % 2 ? 1 - a.uvs[i] / scale : a.uvs[i] / scale)) < 1e-6,
-    ),
+    assert(Math.abs(v - a.uvs[i] / scale) < 1e-6),
   );
   assert.equal(json.materials[0].alphaMode, "OPAQUE");
   assert.deepEqual(Array.from(image(0).pixels), [200, 100, 40, 255]);

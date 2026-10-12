@@ -1,5 +1,5 @@
 {
-  "generator": "0.3.0",
+  "generator": "mixed; see per-file generator",
   "kind": "software geometry rasterization",
   "derivative": "WebP quality 84",
   "browserGPUVerified": false,
@@ -12,42 +12,56 @@
     {
       "file": "c3-waterfall-jungle.webp",
       "sha256": "4187f2f8ac481f00beea104fa398d8c3de9a13fa7f665937cd57c95160e26741",
-      "sourcePNGsha256": "32f9b5ecb8cccf9943b82a7c7da3a3226f10d55b9601c95e130d35a0d14d4d2d"
+      "sourcePNGsha256": "32f9b5ecb8cccf9943b82a7c7da3a3226f10d55b9601c95e130d35a0d14d4d2d",
+      "generator": "0.3.0"
     },
     {
       "file": "c3-villa-desert.webp",
       "sha256": "2d52e2c0bcc2a2c822330b20fbfdefc006689abd38b425e59cdde745fc235f3e",
-      "sourcePNGsha256": "9cf0fde991bffe47cb330075e651385bad3834b8d6f51469314d6deb9721db15"
+      "sourcePNGsha256": "9cf0fde991bffe47cb330075e651385bad3834b8d6f51469314d6deb9721db15",
+      "generator": "0.3.0"
     },
     {
       "file": "c3-temperate.webp",
       "sha256": "61fc15e802d8dd1c86ae1e0665e149a7f2172b392c6186f8b39cde9d98401b12",
-      "sourcePNGsha256": "62540fba8bcd3b1ad21d0b0169464b94422f5fd8e07d5d4b35f9486880c639fe"
+      "sourcePNGsha256": "62540fba8bcd3b1ad21d0b0169464b94422f5fd8e07d5d4b35f9486880c639fe",
+      "generator": "0.3.0"
     },
     {
       "file": "c3-desert.webp",
       "sha256": "c64a763c3071e8d7f153eabb7b262a1525aa241eb57c4752fb6658e95cc5b826",
-      "sourcePNGsha256": "defa77e3bc5333b036e21c70fc6bac4e4a99994ba7affb638465b76428e47cfe"
+      "sourcePNGsha256": "defa77e3bc5333b036e21c70fc6bac4e4a99994ba7affb638465b76428e47cfe",
+      "generator": "0.3.0"
     },
     {
       "file": "c3-fantasy.webp",
       "sha256": "676e0223e3c092e50f1d905c4b0fb31d3b752528caf8824edb1b4fa3a0adf1c2",
-      "sourcePNGsha256": "83d8de56ee2e60b5be7bd2bbbf2ee5a90c3196148103c391da8b409d92f15603"
+      "sourcePNGsha256": "83d8de56ee2e60b5be7bd2bbbf2ee5a90c3196148103c391da8b409d92f15603",
+      "generator": "0.3.0"
     },
     {
       "file": "c3-scifi.webp",
       "sha256": "931a9037815133a6fc4c2216e91f58624b959ce70e10b3d9494f2ea40c19895b",
-      "sourcePNGsha256": "15357b8774b7581de6d92b4f753dccd2aeaaa0037f7fa1b933a5ce17db96797d"
+      "sourcePNGsha256": "15357b8774b7581de6d92b4f753dccd2aeaaa0037f7fa1b933a5ce17db96797d",
+      "generator": "0.3.0"
     },
     {
       "file": "c3-city-temperate.webp",
-      "sha256": "3eb8e55a62cedb0921408fa37109a58a94615f8135617a25beefd5791d1094ec",
-      "sourcePNGsha256": "bb9f6eef29656238d3aeb71629b780d1d5f5337e1ae6199d3aecdaf803455c0f"
+      "sha256": "5d74184f576ac04f8201c6f31c1219de945d95ed646acebc4370f87bf8806b21",
+      "sourcePNGsha256": "f7593d40789c32bb654733fc2b69656efa5cf24806d3c5acc216403200f77fb7",
+      "generator": "0.5.0"
     },
     {
       "file": "c3-jungle.webp",
       "sha256": "b72a66b508210bb58db57b45a43b819285e9356703f00b3cc85a39155cf9b15e",
-      "sourcePNGsha256": "c3eac33f29a509d9fbd42f9fe9ddd42fe40b5b414ba22de41c7defef01e01020"
+      "sourcePNGsha256": "c3eac33f29a509d9fbd42f9fe9ddd42fe40b5b414ba22de41c7defef01e01020",
+      "generator": "0.3.0"
+    },
+    {
+      "file": "c3-viaduct-city.webp",
+      "generator": "0.5.0",
+      "sha256": "3431a2e341b84a635a2f6f4bd9ffadbd0bd9766571f96b78b0e7bed3ec4fe237",
+      "sourcePNGsha256": "3308277c08b820c7ba56b7e932758f8002df63d05fe1e3f4fc585f1419f2e540"
     }
   ]
 }

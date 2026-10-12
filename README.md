@@ -26,7 +26,7 @@ The editor includes:
 - A ZIP export containing `c3-` RWX models, PNG textures, canonical placements, the project, provenance, installation notes, and a validation report.
 - Export Preview rebuilt from actual generated ZIP files with RWX parsing, texture hashes and a VP move runtime. Bounded rebased groups include experimental AWG3 ZIPs and VPPTSV placement probes. Package builds run in a cancellable worker with progress, selectable scopes and group budgets. Packages include per-level SVG geometry plans and a placement inventory.
 
-The native VP profile is **provisional**. The browser round trip does not certify native rendering, scale, winding, transparency, or collision. Experimental AWG syntax is implemented, but its native units/import are unverified. Rotation is an explicit candidate adapter disabled by default. General polygonal room layouts and per-unit overrides, curved streets/districts, viaduct authoring, custom plant recipes/biome masks, streaming/LOD, GLB and rich annotated plans, and complete release acceptance remain pending. The full plan is not complete.
+The native VP profile is **provisional**. The browser round trip does not certify native rendering, scale, winding, transparency, or collision. Experimental AWG syntax is implemented, but its native units/import are unverified. Rotation is an explicit candidate adapter disabled by default. General polygonal room layouts and per-unit overrides, curved streets/districts, viaduct authoring, custom plant recipes/biome masks, streaming/LOD, rich annotated plans, and complete release acceptance remain pending. The full plan is not complete.
 
 ## Development
 

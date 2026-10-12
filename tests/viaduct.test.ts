@@ -47,6 +47,17 @@ test("Elevated road has traversable approaches, clear crossing and grounded boun
       ),
     );
   }
+  const edge = plan.z + p.world.roadWidth / 2 + p.world.sidewalkWidth - 0.1;
+  let lateral: [number, number, number] = [
+    0.75,
+    plan.heightAt(0.75) + 0.125 + 1.68,
+    edge - 0.4,
+  ];
+  lateral = moveWalker(lateral, [0, 1], parts);
+  assert(
+    lateral[2] < edge - 0.15,
+    "Thin rail stops lateral walking between posts",
+  );
   assert(partitionGroups(parts).every((g) => !g.oversize));
   assert.equal(new Set(parts.map((m) => m.id)).size, parts.length);
 });

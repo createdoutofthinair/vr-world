@@ -66,6 +66,7 @@ export function buildViaduct(p: Project): MeshData[] {
     thickness: number,
     material: MeshData["material"],
     solid = true,
+    surface = solid,
   ) => {
     const origin: Vec3 = [(a + b) / 2, 0, plan.z],
       m = new MeshBuilder(),
@@ -119,7 +120,7 @@ export function buildViaduct(p: Project): MeshData[] {
       solid,
       origin,
     );
-    if (solid) {
+    if (surface) {
       mesh.surfaceMesh = true;
       mesh.walkable = true;
     }
@@ -146,6 +147,8 @@ export function buildViaduct(p: Project): MeshData[] {
           1.125,
           0.09,
           "metal",
+          true,
+          false,
         );
         for (const x of [a, (a + b) / 2])
           parts.push(

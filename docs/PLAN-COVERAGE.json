@@ -80,7 +80,7 @@
       "title": "Full v1 polish and release",
       "state": "missing",
       "externalProofPending": true,
-      "evidence": "; tests/glb.test.ts: optional static GLB with independent binary, PBR, alpha and selected-scope fixtures; external viewer and full polish pending"
+      "evidence": "tests/glb.test.ts; tests/glb-validator.test.ts; independent binary fixtures and Khronos validator for scoped embedded-PBR GLB; viewer/browser and full release acceptance pending"
     },
     {
       "id": "C0",
@@ -115,7 +115,7 @@
       "title": "Terrain, bridges, and viaducts",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "tests/effects.test.ts; supported bridge; authored viaduct pending; tests/viaduct.test.ts and tests/package.test.ts: three-block graded viaduct, grounded piers, underpass and actual reconstructed walking; arbitrary authoring and visual/native proof pending"
+      "evidence": "tests/viaduct.test.ts; tests/package.test.ts; grounded bounded viaduct, actual exported walk, crossing/head/guardrail collision; arbitrary route/support authoring and native validation pending"
     },
     {
       "id": "C5",

@@ -30,7 +30,14 @@ for (const example of REFERENCE_EXAMPLES) {
     materials = materialsFor(project);
   writeFileSync(
     `${dir}/${example.id}.json`,
-    JSON.stringify({ project, materials, meshes }),
+    JSON.stringify({
+      project,
+      materials,
+      meshes,
+      ...(example.id === "viaduct-city"
+        ? { camera: { eye: [-115, 22, 10], target: [0, 2, -22.8] } }
+        : {}),
+    }),
   );
   console.log(
     `${example.id}: ${meshes.length} pieces, ${meshes.reduce((n, m) => n + m.indices.length / 3, 0)} triangles`,

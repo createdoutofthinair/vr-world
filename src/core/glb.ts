@@ -39,7 +39,16 @@ export function serializeGLB(
     const key = url + clamp,
       cached = textureCache.get(key);
     if (cached !== undefined) return cached;
-    const view = append(pngBytes(url));
+    // Browser uploads use flipY; bake that row reversal instead of reversing
+    // UV handedness, which would also reverse the tangent normal basis.
+    const img = decodePNG(pngBytes(url)),
+      flipped = new Uint8Array(img.pixels.length);
+    for (let y = 0; y < img.height; y++)
+      flipped.set(
+        img.pixels.subarray(y * img.width * 4, (y + 1) * img.width * 4),
+        (img.height - 1 - y) * img.width * 4,
+      );
+    const view = append(encodePNG({ ...img, pixels: flipped }));
     images.push({ bufferView: view, mimeType: "image/png" });
     const id = textures.length;
     textures.push({ source: images.length - 1, sampler: clamp ? 1 : 0 });
@@ -206,7 +215,7 @@ export function serializeGLB(
         for (let k = 0; k < 3; k++) normals[i + k] /= length;
       }
       const scale = clamp ? 1 : (spec.scale ?? 1),
-        uvs = part.uvs.map((v, i) => (i % 2 ? 1 - v / scale : v / scale));
+        uvs = part.uvs.map((v) => v / scale);
       geometries.push({
         name: `c3-mesh-${geometries.length}`,
         primitives: [

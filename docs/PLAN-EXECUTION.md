@@ -70,3 +70,7 @@ Native/GPU gates remain open. A named-action regression was fixed: targeted crea
 ## 0.5 interrupted-work recovery checkpoint
 
 Recovered the unpublished viaduct, material transparency, calibration and secondary GLB changes into a separate checkout. Added independent GLB binary/material/scope fixtures and a physical walkthrough of the emitted RWX viaduct. Automated suite: 75 passing; production build passes. This completes a bounded checkpoint only: arbitrary infrastructure authoring, external GLB viewer checks, browser/GPU inspection and native target acceptance remain pending. Next implementation task: per-unit/facade overrides with persistence, generation, scope and circulation fixtures.
+
+## 0.5 follow-up verification
+
+Reconciled with the independently recovered 0.5 release on main. Retained its independent binary and actual emitted-walk fixtures. Added Khronos GLB validation, a tangent-preserving texture-orientation fix, a between-post guardrail collision regression and completed viaduct/updated neighborhood WebP delivery with reproducible camera/hash records. Combined suite: 78 tests; production build passing. Browser/GPU/native acceptance remains open.
