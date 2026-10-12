@@ -49,7 +49,7 @@ export interface GroundOperation {
   z: number;
   radius: number;
   strength: number;
-  kind: "raise" | "lower" | "flatten" | "paint";
+  kind: "raise" | "lower" | "flatten" | "smooth" | "paint" | "erase";
   layer: GroundLayer;
   locked: boolean;
 }
@@ -1286,7 +1286,9 @@ export function validateProject(input: unknown): Project {
     if (
       !edit ||
       !/^[a-z0-9-]+$/.test(edit.id) ||
-      !["raise", "lower", "flatten", "paint"].includes(edit.kind) ||
+      !["raise", "lower", "flatten", "smooth", "paint", "erase"].includes(
+        edit.kind,
+      ) ||
       !["grass", "soil", "rock", "sand"].includes(edit.layer) ||
       typeof edit.locked !== "boolean" ||
       ![edit.x, edit.z, edit.radius, edit.strength].every(Number.isFinite) ||

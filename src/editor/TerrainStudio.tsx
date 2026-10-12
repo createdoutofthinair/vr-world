@@ -8,6 +8,7 @@ export function TerrainStudio() {
     [kind, setKind] = useState<GroundOperation["kind"]>("paint"),
     [layer, setLayer] = useState<GroundLayer>("grass"),
     [radius, setRadius] = useState(3),
+    [hover, setHover] = useState<{ x: number; z: number } | null>(null),
     [strength, setStrength] = useState(0.7),
     [width, depth] = terrainDomain(p),
     change = (patch: Partial<TerrainSettings>) =>
@@ -89,9 +90,11 @@ export function TerrainStudio() {
           value={kind}
           onChange={(e) => setKind(e.target.value as GroundOperation["kind"])}
         >
-          {["paint", "raise", "lower", "flatten"].map((v) => (
-            <option key={v}>{v}</option>
-          ))}
+          {["paint", "erase", "raise", "lower", "flatten", "smooth"].map(
+            (v) => (
+              <option key={v}>{v}</option>
+            ),
+          )}
         </select>
       </label>
       <label className="field">
@@ -131,14 +134,32 @@ export function TerrainStudio() {
         viewBox={`${-width / 2} ${-depth / 2} ${width} ${depth}`}
         style={{ width: "100%", cursor: "crosshair" }}
         aria-label="Terrain brush map"
+        onPointerLeave={() => setHover(null)}
+        onPointerMove={(e) => {
+          const matrix = e.currentTarget.getScreenCTM();
+          if (!matrix) return;
+          const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(
+            matrix.inverse(),
+          );
+          setHover(
+            Math.abs(point.x) <= width / 2 && Math.abs(point.y) <= depth / 2
+              ? { x: point.x, z: -point.y }
+              : null,
+          );
+        }}
         onPointerDown={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect(),
-            x = ((e.clientX - rect.left) / rect.width) * width - width / 2,
-            z = depth / 2 - ((e.clientY - rect.top) / rect.height) * depth;
+          const matrix = e.currentTarget.getScreenCTM();
+          if (!matrix) return;
+          const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(
+              matrix.inverse(),
+            ),
+            x = point.x,
+            z = -point.y;
+          if (Math.abs(x) > width / 2 || Math.abs(z) > depth / 2) return;
           s.update({
             terrain: {
               ...p.terrain,
-              splats: kind === "paint" || p.terrain.splats,
+              splats: kind === "paint" || kind === "erase" || p.terrain.splats,
               edits: [
                 ...p.terrain.edits,
                 {
@@ -190,11 +211,24 @@ export function TerrainStudio() {
             strokeWidth={0.1}
           />
         ))}
+        {hover && (
+          <circle
+            cx={hover.x}
+            cy={-hover.z}
+            r={radius}
+            fill="#ceef8020"
+            stroke="#ffffff"
+            strokeWidth={0.12}
+            pointerEvents="none"
+          />
+        )}
       </svg>
       <p className="panel-note">
         Click the map to commit one brush operation. Undo restores edits; seed
         changes retain committed paint and sculpt operations. Painting uses
-        ordinary baked PNGs in RWX.
+        ordinary baked PNGs in RWX. Smooth blends neighboring elevations before
+        infrastructure grading; erase restores automatic surface layers in the
+        brush area.
       </p>
       {p.terrain.edits.map((edit) => (
         <div className="plant-row" key={edit.id}>

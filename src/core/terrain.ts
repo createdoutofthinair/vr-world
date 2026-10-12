@@ -80,14 +80,6 @@ function baseHeight(p: Project, x: number, z: number): number {
               0.28 * Math.sin((x * 6) / w + phase) * Math.cos((z * 4.5) / w) +
               0.12 * Math.sin((x * 14) / w + (z * 8) / w);
   value *= p.landscape.relief * t.amplitude;
-  for (const edit of t.edits)
-    if (edit.kind !== "paint") {
-      const distance = Math.hypot(x - edit.x, z - edit.z),
-        weight = 1 - smooth(distance / edit.radius);
-      if (edit.kind === "raise") value += edit.strength * weight;
-      else if (edit.kind === "lower") value -= edit.strength * weight;
-      else value = value * (1 - weight) + edit.strength * weight;
-    }
   return -0.02 + value;
 }
 function infrastructureMask(
@@ -151,7 +143,9 @@ export function terrainField(p: Project): TerrainField {
         ...p.terrain,
         splats: undefined,
         texelsPerMeter: undefined,
-        edits: p.terrain.edits.filter((e) => e.kind !== "paint"),
+        edits: p.terrain.edits.filter(
+          (e) => e.kind !== "paint" && e.kind !== "erase",
+        ),
       },
       p.world,
       p.effects,
@@ -173,6 +167,40 @@ export function terrainField(p: Project): TerrainField {
         -width / 2 + (x * width) / nx,
         -depth / 2 + (z * depth) / nz,
       );
+  // Evaluate each committed sculpt operation against the complete preceding
+  // field. Snapshot smoothing avoids scan-order bias across chunk boundaries.
+  for (const edit of p.terrain.edits) {
+    if (edit.kind === "paint" || edit.kind === "erase") continue;
+    const previous = edit.kind === "smooth" ? heights.slice() : heights;
+    for (let z = 0; z <= nz; z++)
+      for (let x = 0; x <= nx; x++) {
+        const i = at(x, z),
+          xx = -width / 2 + (x * width) / nx,
+          zz = -depth / 2 + (z * depth) / nz,
+          weight =
+            1 - smooth(Math.hypot(xx - edit.x, zz - edit.z) / edit.radius);
+        if (!weight) continue;
+        if (edit.kind === "raise") heights[i] += edit.strength * weight;
+        else if (edit.kind === "lower") heights[i] -= edit.strength * weight;
+        else if (edit.kind === "flatten")
+          heights[i] += (edit.strength - 0.02 - heights[i]) * weight;
+        else {
+          let total = 0,
+            count = 0;
+          for (let dz = -1; dz <= 1; dz++)
+            for (let dx = -1; dx <= 1; dx++) {
+              const sx = x + dx,
+                sz = z + dz;
+              if (sx >= 0 && sx <= nx && sz >= 0 && sz <= nz) {
+                total += previous[at(sx, sz)];
+                count++;
+              }
+            }
+          heights[i] +=
+            (total / count - previous[i]) * weight * Math.min(1, edit.strength);
+        }
+      }
+  }
   const iterations = Math.round(p.terrain.erosion);
   for (let pass = 0; pass < iterations; pass++) {
     const delta = new Float64Array(heights.length);
@@ -314,14 +342,21 @@ export function terrainWeights(
       rock: 0.08 + rock * 0.8,
       sand,
     };
+  const baseSum = Object.values(weights).reduce((a, b) => a + b, 0);
+  for (const layer of Object.keys(weights) as GroundLayer[])
+    weights[layer] /= baseSum;
+  const automatic = { ...weights };
   for (const edit of p.terrain.edits)
-    if (edit.kind === "paint") {
+    if (edit.kind === "paint" || edit.kind === "erase") {
       const amount =
         (1 - smooth(Math.hypot(x - edit.x, z - edit.z) / edit.radius)) *
         Math.min(1, edit.strength);
       for (const layer of Object.keys(weights) as GroundLayer[])
         weights[layer] *= 1 - amount;
-      weights[edit.layer] += amount;
+      if (edit.kind === "paint") weights[edit.layer] += amount;
+      else
+        for (const layer of Object.keys(weights) as GroundLayer[])
+          weights[layer] += automatic[layer] * amount;
     }
   const sum = Object.values(weights).reduce((a, b) => a + b, 0);
   for (const layer of Object.keys(weights) as GroundLayer[])

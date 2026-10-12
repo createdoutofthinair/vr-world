@@ -139,3 +139,76 @@ test("Corrupt or mismatched PNG assets are rejected before a project is accepted
   };
   assert.throws(() => validateProject(p), /checksum|compression/);
 });
+
+test("Saved smoothing reduces a sculpted peak without changing distant ground or graded pads", () => {
+  const p = preset("house");
+  p.terrain.form = "plain";
+  p.terrain.erosion = 0;
+  p.terrain.edits = [
+    {
+      id: "peak",
+      x: -12,
+      z: -12,
+      radius: 2,
+      strength: 4,
+      kind: "raise",
+      layer: "rock",
+      locked: true,
+    },
+  ];
+  const peak = terrainHeight(p, -12, -12),
+    distant = terrainHeight(p, 12, 12);
+  p.terrain.edits.push({
+    id: "smooth",
+    x: -12,
+    z: -12,
+    radius: 3,
+    strength: 1,
+    kind: "smooth",
+    layer: "rock",
+    locked: true,
+  });
+  const restored = validateProject(JSON.parse(JSON.stringify(p)));
+  assert(terrainHeight(restored, -12, -12) < peak);
+  assert(terrainHeight(restored, -12, -12) > -0.02);
+  assert.equal(terrainHeight(restored, 12, 12), distant);
+  assert.equal(terrainHeight(restored, 0, 0), -0.02);
+  assert.deepEqual(terrainField(restored).heights, terrainField(p).heights);
+});
+
+test("Erase restores generated surface weights locally and leaves sculpt geometry cached", () => {
+  const p = preset("house");
+  const baseline = terrainWeights(p, -12, -12),
+    field = terrainField(p);
+  p.terrain.edits = [
+    {
+      id: "paint",
+      x: -12,
+      z: -12,
+      radius: 4,
+      strength: 1,
+      kind: "paint",
+      layer: "rock",
+      locked: true,
+    },
+  ];
+  assert.equal(terrainWeights(p, -12, -12).rock, 1);
+  p.terrain.edits.push({
+    id: "erase",
+    x: -12,
+    z: -12,
+    radius: 2,
+    strength: 1,
+    kind: "erase",
+    layer: "rock",
+    locked: true,
+  });
+  assert.deepEqual(terrainWeights(p, -12, -12), baseline);
+  assert(
+    terrainWeights(p, -15, -12).rock >
+      terrainWeights(preset("house"), -15, -12).rock,
+  );
+  assert.equal(terrainField(p), field);
+  const restored = validateProject(JSON.parse(JSON.stringify(p)));
+  assert.deepEqual(terrainWeights(restored, -12, -12), baseline);
+});
