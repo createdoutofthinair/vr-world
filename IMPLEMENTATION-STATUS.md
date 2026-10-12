@@ -53,9 +53,13 @@ All 85 tests and production build pass. Regression evidence includes asymmetric 
 
 ## World-first UX checkpoint
 
-The default editor now presents a full viewport, narrow tool rail, one closable contextual editing card and an object-picked right-click radial action menu. Menus use working studio controls selected by building/environment/vegetation context; an Actions button supports keyboard/touch activation without right-click. Escape dismisses menus/cards. Existing docked panels and saved layouts remain available under Advanced, with a World view return action. Existing project undo/export/cutaway/walk controls remain functional. The cards reuse existing authored controls; some are global material/building recipe controls, not per-instance editing. Direct drag transforms, resize handles, touch long-press, finer per-instance cards and minimap are pending. Curved roads are paused per user instruction.
+The default editor now presents a full viewport, narrow tool rail, one closable contextual editing card and an object-picked right-click radial action menu. Menus use working studio controls selected by building/environment/vegetation context; an Actions button supports keyboard/touch activation without right-click. Escape dismisses menus/cards. Existing docked panels and saved layouts remain available under Advanced, with a World view return action. Existing project undo/export/cutaway/walk controls remain functional. The cards reuse existing authored controls; some are global material/building recipe controls, not per-instance editing. Direct drag transforms, resize handles, finer per-instance cards are pending. Curved roads are paused per user instruction.
 
 All 85 existing automated tests pass; production build passes. Browser/GPU interaction and responsive visual acceptance have not been performed. This is the first functional layout pass toward the approved generated concept; scene fidelity and all illustrated controls are not claimed implemented.
+
+## Intuitive interaction follow-up
+
+Material editing automatically starts from the clicked mesh's material role and follows later selection, with an explicit shared-role scope notice. Touch long-press opens object-picked actions after 550 ms; dragging beyond 8 px cancels the hold, release after a hold does not deselect, and cancellation/disposal clear timers. Radial placement uses actual workspace coordinates and viewport bounds. Arrow/Tab navigation moves focus between actions; Escape closes the menu/card. A generated neighborhood minimap renders actual road and parcel positions, highlights the selected parcel, and supports click/keyboard selection. All 85 existing tests and production build pass. These are implementation checks, not browser gesture/accessibility/GPU acceptance. Full authored transform gizmos and per-instance overrides remain incomplete; curves stay paused.
 
 ## Verification
 

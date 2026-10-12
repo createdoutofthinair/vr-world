@@ -1,5 +1,5 @@
 import { createCalibrationKit } from "../core/calibration";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import {
   Box,
   ChevronDown,
@@ -369,8 +369,14 @@ export function Presets() {
 export function Materials() {
   const s = useStudio(),
     specs = materialsFor(s.project),
-    [role, setRole] = useState<MaterialRole>("wall"),
+    [role, setRole] = useState<MaterialRole>(
+      () => s.meshes.find((m) => m.id === s.selected)?.material ?? "wall",
+    ),
     [uploading, setUploading] = useState(false);
+  useEffect(() => {
+    const selected = s.meshes.find((m) => m.id === s.selected);
+    if (selected) setRole(selected.material);
+  }, [s.selected]);
   const upload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -392,7 +398,11 @@ export function Materials() {
   };
   return (
     <div className="panel-pad">
-      <div className="panel-eyebrow">SURFACE LIBRARY</div>
+      <div className="panel-eyebrow">SELECTED SURFACE</div>
+      <p className="panel-note">
+        Editing {role}: changes apply to every surface sharing this material
+        role. Click another surface to switch.
+      </p>
       <label className="field">
         Material tint
         <input

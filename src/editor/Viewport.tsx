@@ -260,7 +260,26 @@ export function Viewport() {
       py = 0;
     const ray = new THREE.Raycaster();
     let touchLook: [number, number] | null = null;
+    let holdTimer: ReturnType<typeof setTimeout> | null = null,
+      held = false;
+    const cancelHold = () => {
+      if (holdTimer) clearTimeout(holdTimer);
+      holdTimer = null;
+    };
     const pointerDown = (e: PointerEvent) => {
+      cancelHold();
+      held = false;
+      if (e.pointerType === "touch" && current.current.mode === "orbit") {
+        holdTimer = setTimeout(() => {
+          held = true;
+          contextMenu(
+            new MouseEvent("contextmenu", {
+              clientX: e.clientX,
+              clientY: e.clientY,
+            }),
+          );
+        }, 550);
+      }
       if (touchActive.current && e.pointerType === "touch") {
         touchLook = [e.clientX, e.clientY];
         renderer.domElement.setPointerCapture(e.pointerId);
@@ -269,6 +288,7 @@ export function Viewport() {
       py = e.clientY;
     };
     const pointerMove = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - px, e.clientY - py) > 8) cancelHold();
       if (!touchActive.current || !touchLook) return;
       camera.rotation.y -= (e.clientX - touchLook[0]) * 0.005;
       camera.rotation.x = Math.max(
@@ -281,7 +301,12 @@ export function Viewport() {
       touchLook = [e.clientX, e.clientY];
     };
     const pointerUp = (e: PointerEvent) => {
+      cancelHold();
       touchLook = null;
+      if (held) {
+        held = false;
+        return;
+      }
       if (
         current.current.mode !== "orbit" ||
         Math.hypot(e.clientX - px, e.clientY - py) > 5
@@ -340,7 +365,12 @@ export function Viewport() {
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointerup", pointerUp);
     renderer.domElement.addEventListener("pointermove", pointerMove);
-    renderer.domElement.addEventListener("pointercancel", pointerUp);
+    const pointerCancel = () => {
+      cancelHold();
+      held = false;
+      touchLook = null;
+    };
+    renderer.domElement.addEventListener("pointercancel", pointerCancel);
     const lost = (e: Event) => {
       e.preventDefault();
       walk.unlock();
@@ -482,7 +512,8 @@ export function Viewport() {
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
       renderer.domElement.removeEventListener("pointerup", pointerUp);
       renderer.domElement.removeEventListener("pointermove", pointerMove);
-      renderer.domElement.removeEventListener("pointercancel", pointerUp);
+      cancelHold();
+      renderer.domElement.removeEventListener("pointercancel", pointerCancel);
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       renderer.domElement.removeEventListener("webglcontextrestored", restored);
       walk.dispose();

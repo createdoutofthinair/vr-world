@@ -3074,3 +3074,51 @@ h3 {
   bottom: auto;
   max-height: calc(100% - 85px);
 }
+.world-minimap {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  width: 145px;
+  padding: 12px;
+  background: #17252eea;
+  color: white;
+  border: 1px solid #ffffff40;
+  border-radius: 18px;
+  z-index: 8;
+  box-shadow: 0 8px 25px #0003;
+}
+.world-minimap b {
+  font-size: 11px;
+}
+.world-minimap svg {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.world-minimap rect {
+  cursor: pointer;
+}
+.world-minimap rect:focus {
+  outline: 2px solid white;
+}
+.world-radial > button {
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.world-card {
+  z-index: 12;
+}
+.world-tools button:focus-visible {
+  outline: 2px solid #7ff4ed;
+}
+@media (max-width: 600px) {
+  .world-minimap {
+    width: 100px;
+    bottom: 48px;
+    right: 8px;
+  }
+  .world-hint {
+    max-width: calc(100% - 135px);
+  }
+}

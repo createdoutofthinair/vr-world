@@ -43,6 +43,7 @@ import { SignStudio } from "./SignStudio";
 import { PerformanceStudio } from "./PerformanceStudio";
 import { RoomStudio } from "./RoomStudio";
 import { HistoryStudio } from "./HistoryStudio";
+import { cityPlan } from "../core/city";
 import { download } from "../core/package";
 const components = {
   explorer: Explorer,
@@ -177,6 +178,8 @@ function defaultLayout(api: DockviewApi) {
 }
 function EditorInner() {
   const s = useStudio(),
+    workspace = useRef<HTMLDivElement | null>(null),
+    radialElement = useRef<HTMLDivElement | null>(null),
     api = useRef<DockviewApi | null>(null),
     layoutSub = useRef<{ dispose: () => void } | null>(null),
     [focused, setFocused] = useState(true),
@@ -189,6 +192,12 @@ function EditorInner() {
     [menus, setMenus] = useState(false),
     [palette, setPalette] = useState(false),
     [query, setQuery] = useState("");
+  useEffect(() => {
+    if (radial)
+      radialElement.current
+        ?.querySelector<HTMLButtonElement>("button")
+        ?.focus();
+  }, [radial]);
   const ready = ({ api: a }: DockviewReadyEvent) => {
     api.current = a;
     const key =
@@ -399,7 +408,7 @@ function EditorInner() {
           </button>
         </div>
       </div>
-      <div className="dock-container world-first">
+      <div ref={workspace} className="dock-container world-first">
         {focused ? (
           <>
             <Viewport />
@@ -447,7 +456,72 @@ function EditorInner() {
             </div>
             {!card && !radial && s.mode === "orbit" && (
               <div className="world-hint">
-                Click to select · Right-click to edit · Esc to close
+                Click to select · Right-click / long-press to edit · Esc to
+                close
+              </div>
+            )}
+            {s.project.world.enabled && (
+              <div className="world-minimap" aria-label="Neighborhood overview">
+                <b>Neighborhood</b>
+                {(() => {
+                  const plan = cityPlan(s.project);
+                  return (
+                    <svg
+                      viewBox={`${-plan.extent} ${-plan.extent} ${plan.extent * 2} ${plan.extent * 2}`}
+                      aria-label="Select a parcel from the map"
+                    >
+                      {plan.edges.map((edge) => {
+                        const a = plan.nodes.find((n) => n.id === edge.from)!,
+                          b = plan.nodes.find((n) => n.id === edge.to)!;
+                        return (
+                          <line
+                            key={edge.id}
+                            x1={a.x}
+                            y1={-a.z}
+                            x2={b.x}
+                            y2={-b.z}
+                            stroke="#819b9e"
+                            strokeWidth={s.project.world.roadWidth}
+                          />
+                        );
+                      })}
+                      {plan.plots.map((plot) => (
+                        <rect
+                          key={plot.id}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Select ${plot.id}`}
+                          x={plot.x - 5}
+                          y={-plot.z - 5}
+                          width={10}
+                          height={10}
+                          fill={
+                            s.selected?.startsWith(plot.id)
+                              ? "#5eeee0"
+                              : plot.park
+                                ? "#729b56"
+                                : "#d3d7c0"
+                          }
+                          onClick={() =>
+                            s.select(
+                              s.meshes.find((m) => m.id.startsWith(plot.id))
+                                ?.id ?? null,
+                            )
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              s.select(
+                                s.meshes.find((m) => m.id.startsWith(plot.id))
+                                  ?.id ?? null,
+                              );
+                            }
+                          }}
+                        />
+                      ))}
+                    </svg>
+                  );
+                })()}
               </div>
             )}
             {card &&
@@ -478,17 +552,60 @@ function EditorInner() {
                   onClick={() => setRadial(null)}
                 />
                 <div
+                  ref={radialElement}
                   className="world-radial"
+                  onKeyDown={(e) => {
+                    const buttons = Array.from(
+                      e.currentTarget.querySelectorAll<HTMLButtonElement>(
+                        "button",
+                      ),
+                    );
+                    const index = buttons.indexOf(
+                      document.activeElement as HTMLButtonElement,
+                    );
+                    if (
+                      [
+                        "ArrowRight",
+                        "ArrowDown",
+                        "ArrowLeft",
+                        "ArrowUp",
+                        "Tab",
+                      ].includes(e.key)
+                    ) {
+                      e.preventDefault();
+                      const backwards =
+                        e.shiftKey ||
+                        e.key === "ArrowLeft" ||
+                        e.key === "ArrowUp";
+                      buttons[
+                        (index + (backwards ? -1 : 1) + buttons.length) %
+                          buttons.length
+                      ]?.focus();
+                    }
+                  }}
                   role="dialog"
                   aria-label="Object actions"
                   style={{
-                    left: Math.min(
-                      Math.max(150, radial.x),
-                      window.innerWidth - 150,
+                    left: Math.max(
+                      140,
+                      Math.min(
+                        radial.x -
+                          (workspace.current?.getBoundingClientRect().left ??
+                            0),
+                        (workspace.current?.clientWidth ?? window.innerWidth) -
+                          140,
+                      ),
                     ),
-                    top: Math.min(
-                      Math.max(150, radial.y - 110),
-                      window.innerHeight - 260,
+                    top: Math.max(
+                      0,
+                      Math.min(
+                        radial.y -
+                          (workspace.current?.getBoundingClientRect().top ??
+                            0) -
+                          140,
+                        (workspace.current?.clientHeight ??
+                          window.innerHeight) - 280,
+                      ),
                     ),
                   }}
                 >
