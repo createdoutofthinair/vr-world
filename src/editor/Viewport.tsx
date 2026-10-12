@@ -18,9 +18,11 @@ import {
   Vec3,
   BIOMES,
 } from "../core/project";
-import { moveWalker } from "../core/geometry";
+import { moveWalker, bounds, findWalkSpawn } from "../core/geometry";
 import { textureImage } from "../core/textures";
-import { useStudio } from "./store";
+import { useStudio, clockSeconds } from "./store";
+import { ActionRuntime } from "../core/actions";
+import { publishPerformance } from "../core/performance";
 
 function disposeGroup(group: THREE.Group) {
   const geometries = new Set<THREE.BufferGeometry>(),
@@ -31,8 +33,10 @@ function disposeGroup(group: THREE.Group) {
       geometries.add(o.geometry);
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
         mats.add(m);
-        if ("map" in m && m.map instanceof THREE.Texture) maps.add(m.map);
+        for (const value of Object.values(m))
+          if (value instanceof THREE.Texture) maps.add(value);
       }
+      if (o instanceof THREE.InstancedMesh) o.dispose();
     }
   });
   geometries.forEach((g) => g.dispose());
@@ -50,6 +54,8 @@ interface Runtime {
   frame: (buildingOnly?: boolean) => void;
   light: THREE.DirectionalLight;
   grid: THREE.GridHelper;
+  actions?: ActionRuntime;
+  bindings?: Map<string, THREE.Object3D>;
 }
 export function Viewport() {
   const s = useStudio(),
@@ -116,15 +122,36 @@ export function Viewport() {
     const frame = (buildingOnly = false) => {
       walk.unlock();
       orbit.enabled = true;
-      const p = current.current.project;
-      const margin =
-        p.landscape.enabled && !buildingOnly ? p.landscape.extent : 0;
-      camera.position.set(
-        p.width * 1.2 + margin,
-        p.height * 2.1 + margin * 0.9,
-        p.depth * 1.55 + margin * 1.15,
-      );
-      orbit.target.set(0, p.height * 0.65, 0);
+      const state = current.current;
+      const meshes =
+        state.view === "export" && state.bundle
+          ? state.bundle.meshes
+          : state.meshes;
+      const selected = buildingOnly
+        ? meshes.filter((m) =>
+            ["structure", "interior", "detail"].includes(m.category),
+          )
+        : meshes;
+      const box = new THREE.Box3();
+      for (const mesh of selected) {
+        const b = bounds(mesh);
+        box.expandByPoint(new THREE.Vector3(...b.min));
+        box.expandByPoint(new THREE.Vector3(...b.max));
+      }
+      if (box.isEmpty())
+        box.set(new THREE.Vector3(-5, 0, -5), new THREE.Vector3(5, 3, 5));
+      const center = box.getCenter(new THREE.Vector3()),
+        size = box.getSize(new THREE.Vector3());
+      const distance = Math.max(size.x, size.z, size.y * 1.5) * 1.4;
+      camera.far = Math.max(200, distance * 5);
+      camera.updateProjectionMatrix();
+      orbit.maxDistance = Math.max(90, distance * 3);
+      camera.position
+        .copy(center)
+        .add(
+          new THREE.Vector3(distance * 0.65, distance * 0.7, distance * 0.9),
+        );
+      orbit.target.copy(center);
       orbit.update();
     };
     runtime.current = {
@@ -149,7 +176,15 @@ export function Viewport() {
     resize.observe(host);
     const keys = new Set<string>();
     const down = (e: KeyboardEvent) => {
-        if (walk.isLocked) {
+        if (
+          (e.target as HTMLElement).closest(
+            "input,textarea,select,[contenteditable=true]",
+          )
+        )
+          return;
+        if (walk.isLocked && !current.current.generating) {
+          if (e.code === "KeyE" && !e.repeat)
+            current.current.interactDoor(camera.position.toArray() as Vec3);
           keys.add(e.code);
           if (
             [
@@ -207,8 +242,13 @@ export function Viewport() {
       );
       const hit = ray
         .intersectObjects(group.children, false)
-        .find((h) => h.object.userData.id);
-      current.current.select(hit?.object.userData.id ?? null);
+        .find((h) => h.object.userData.id || h.object.userData.ids);
+      current.current.select(
+        hit
+          ? (hit.object.userData.id ??
+              hit.object.userData.ids[hit.instanceId ?? 0])
+          : null,
+      );
     };
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointerup", pointerUp);
@@ -224,11 +264,37 @@ export function Viewport() {
     renderer.domElement.addEventListener("webglcontextrestored", restored);
     let tick = 0,
       last = performance.now();
+    let perfTick = 0,
+      frameSum = 0,
+      frameCount = 0;
+    const gpu = renderer.getContext(),
+      gpuExtension = gpu.getExtension("WEBGL_debug_renderer_info"),
+      gpuName = gpuExtension
+        ? String(gpu.getParameter(gpuExtension.UNMASKED_RENDERER_WEBGL))
+        : String(gpu.getParameter(gpu.RENDERER));
     renderer.setAnimationLoop((now) => {
+      frameSum += now - last;
+      frameCount++;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
       const state = current.current;
-      if (walk.isLocked) {
+      const elapsed = clockSeconds(state.simulation, now);
+      if (runtime.current?.actions && runtime.current.bindings)
+        for (const [id, object] of runtime.current.bindings) {
+          try {
+            const pose = runtime.current.actions.snapshot(
+              id,
+              elapsed,
+              state.simulation.rotation,
+            );
+            object.position.fromArray(pose.position);
+            object.rotation.set(...pose.rotation);
+            object.visible = pose.visible;
+          } catch (error) {
+            setError((error as Error).message);
+          }
+        }
+      if (walk.isLocked && !state.generating) {
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
         forward.y = 0;
@@ -274,6 +340,23 @@ export function Viewport() {
         !renderer.getContext().isContextLost()
       )
         renderer.render(scene, camera);
+      if (now - perfTick > 500) {
+        publishPerformance({
+          time: now / 1000,
+          frameMS: frameSum / Math.max(1, frameCount),
+          drawCalls: renderer.info.render.calls,
+          triangles: renderer.info.render.triangles,
+          geometries: renderer.info.memory.geometries,
+          textures: renderer.info.memory.textures,
+          width: host.clientWidth,
+          height: host.clientHeight,
+          pixelRatio: renderer.getPixelRatio(),
+          renderer: gpuName,
+        });
+        perfTick = now;
+        frameSum = 0;
+        frameCount = 0;
+      }
     });
     return () => {
       renderer.setAnimationLoop(null);
@@ -305,37 +388,82 @@ export function Viewport() {
     disposeGroup(group);
     const exported = s.view === "export" && s.bundle,
       meshes = exported ? s.bundle!.meshes : s.meshes,
-      specs = exported ? s.bundle!.specs : materialsFor(s.project),
+      specs = exported ? s.bundle!.specs : materialsFor(s.renderProject),
       loader = new THREE.TextureLoader(),
-      cache = new Map<MaterialRole, THREE.MeshStandardMaterial>(),
-      geometryCache = new Map<number[], THREE.BufferGeometry>();
+      cache = new Map<string, THREE.MeshStandardMaterial>(),
+      geometryCache = new Map<string, THREE.BufferGeometry>(),
+      batches = new Map<
+        string,
+        {
+          geometry: THREE.BufferGeometry;
+          material: THREE.MeshStandardMaterial;
+          parts: MeshData[];
+        }
+      >();
+    rt.actions = new ActionRuntime(meshes);
+    rt.bindings = new Map();
     for (const part of meshes) {
       if (part.category === "roof" && s.cutaway) continue;
       const spec = specs[part.material];
-      let mat = cache.get(part.material);
+      const materialKey =
+        part.material +
+        ":" +
+        (part.materialColor ?? spec.color) +
+        ":" +
+        (part.bakedTexture ? part.id : (part.textureRef ?? ""));
+      let mat = cache.get(materialKey);
       if (!mat) {
         const data = exported
-          ? s.bundle!.images[part.material]
-          : textureImage(spec, s.project);
+          ? (s.bundle!.textureImages[part.textureRef ?? ""] ??
+            s.bundle!.images[part.material])
+          : (part.bakedTexture?.dataUrl ?? textureImage(spec, s.renderProject));
         const texture = loader.load(data);
         texture.colorSpace = THREE.SRGBColorSpace;
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.wrapS = texture.wrapT =
+          part.bakedTexture || part.textureRef?.startsWith("c3-terrain-")
+            ? THREE.ClampToEdgeWrapping
+            : THREE.RepeatWrapping;
         texture.anisotropy = Math.min(
           8,
           rt.renderer.capabilities.getMaxAnisotropy(),
         );
+        if (!part.bakedTexture && !part.textureRef?.startsWith("c3-terrain-"))
+          texture.repeat.set(1 / (spec.scale ?? 1), 1 / (spec.scale ?? 1));
         mat = new THREE.MeshStandardMaterial({
-          color: spec.color,
+          color: part.materialColor ?? spec.color,
           map: texture,
-          roughness: part.material === "glass" ? 0.15 : 0.84,
-          metalness: part.material === "trim" ? 0.1 : 0,
+          roughness: exported ? 0.84 : (spec.roughness ?? 0.84),
+          metalness: exported ? 0 : (spec.metalness ?? 0),
           transparent: spec.opacity < 1,
           opacity: spec.opacity,
           depthWrite: spec.opacity >= 1,
         });
-        cache.set(part.material, mat);
+        const maps = !exported
+          ? s.renderProject.materialMaps[part.material]
+          : undefined;
+        if (maps) {
+          const load = (
+            asset: { dataUrl: string } | undefined,
+            color = false,
+          ) => {
+            if (!asset) return null;
+            const t = loader.load(asset.dataUrl);
+            t.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            t.repeat.copy(texture.repeat);
+            return t;
+          };
+          mat.normalMap = load(maps.normal);
+          mat.roughnessMap = load(maps.roughness);
+          mat.metalnessMap = load(maps.metalness);
+          mat.emissiveMap = load(maps.emissive, true);
+          if (maps.emissive) mat.emissive.set("#ffffff");
+          if (maps.normalConvention === "directx") mat.normalScale.y = -1;
+        }
+        cache.set(materialKey, mat);
       }
-      let g = geometryCache.get(part.positions);
+      const shape = JSON.stringify([part.positions, part.uvs, part.indices]);
+      let g = geometryCache.get(shape);
       if (!g) {
         g = new THREE.BufferGeometry();
         g.setAttribute(
@@ -346,14 +474,65 @@ export function Viewport() {
         g.setIndex(part.indices);
         g.computeVertexNormals();
         g.computeBoundingBox();
-        geometryCache.set(part.positions, g);
+        geometryCache.set(shape, g);
+      }
+      if (
+        spec.opacity >= 1 &&
+        !part.doorId &&
+        !/\b(move|rotate|visible)\b/.test(part.action ?? "")
+      ) {
+        const key =
+          shape +
+          materialKey +
+          ":" +
+          Math.floor(part.origin[0] / 32) +
+          "," +
+          Math.floor(part.origin[2] / 32);
+        const batch = batches.get(key) ?? {
+          geometry: g,
+          material: mat,
+          parts: [],
+        };
+        batch.parts.push(part);
+        batches.set(key, batch);
+        continue;
       }
       const mesh = new THREE.Mesh(g, mat);
       mesh.position.fromArray(part.origin);
       mesh.userData = { id: part.id };
+      if (part.action && /\b(move|rotate|visible)\b/.test(part.action))
+        rt.bindings?.set(part.id, mesh);
       mesh.castShadow = part.material !== "glass";
       mesh.receiveShadow = true;
       group.add(mesh);
+    }
+    const matrix = new THREE.Matrix4();
+    for (const batch of batches.values()) {
+      if (batch.parts.length === 1) {
+        const part = batch.parts[0],
+          mesh = new THREE.Mesh(batch.geometry, batch.material);
+        mesh.position.fromArray(part.origin);
+        mesh.userData = { id: part.id };
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      } else {
+        const mesh = new THREE.InstancedMesh(
+          batch.geometry,
+          batch.material,
+          batch.parts.length,
+        );
+        batch.parts.forEach((part, i) => {
+          matrix.makeTranslation(...part.origin);
+          mesh.setMatrixAt(i, matrix);
+        });
+        mesh.userData = { ids: batch.parts.map((p) => p.id) };
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingSphere();
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
     }
   }, [
     s.meshes,
@@ -363,6 +542,7 @@ export function Viewport() {
     s.project,
     contextRevision,
     s.assetRevision,
+    s.renderProject,
   ]);
   useEffect(() => {
     const rt = runtime.current;
@@ -375,13 +555,19 @@ export function Viewport() {
           (o.material as THREE.Material).dispose();
         }
       }
-    const mesh = rt.group.children.find((o) => o.userData.id === s.selected);
-    if (mesh instanceof THREE.Mesh) {
-      const line = new THREE.LineSegments(
-        new THREE.EdgesGeometry(mesh.geometry),
-        new THREE.LineBasicMaterial({ color: "#b5ef76", depthTest: false }),
-      );
-      line.position.copy(mesh.position);
+    const part = (
+      s.view === "export" && s.bundle ? s.bundle.meshes : s.meshes
+    ).find((m) => m.id === s.selected);
+    if (part) {
+      const b = bounds(part),
+        line = new THREE.Box3Helper(
+          new THREE.Box3(
+            new THREE.Vector3(...b.min),
+            new THREE.Vector3(...b.max),
+          ),
+          0xb5ef76,
+        );
+      (line.material as THREE.Material).depthTest = false;
       line.renderOrder = 10;
       line.userData.selectionOutline = true;
       rt.group.add(line);
@@ -393,7 +579,20 @@ export function Viewport() {
     if (s.mode === "walk") {
       rt.walk.unlock();
       rt.orbit.enabled = false;
-      rt.camera.position.set(0, 1.66, s.project.depth / 2 + 5);
+      const meshes =
+        s.view === "export" && s.bundle ? s.bundle.meshes : s.meshes;
+      const spawn = findWalkSpawn(meshes, [
+        0,
+        1.68,
+        s.renderProject.depth / 2 + 5,
+      ]);
+      if (!spawn) {
+        setError(
+          "No supported clear walking spawn exists. Inspect geometry in orbit mode.",
+        );
+        return;
+      }
+      rt.camera.position.fromArray(spawn);
       rt.camera.lookAt(0, 1.66, 0);
     } else {
       rt.walk.unlock();
@@ -403,7 +602,7 @@ export function Viewport() {
   useEffect(() => {
     const rt = runtime.current;
     if (!rt) return;
-    const biome = BIOMES[s.project.biome];
+    const biome = BIOMES[s.renderProject.biome];
     const canvas = document.createElement("canvas");
     canvas.width = 2;
     canvas.height = 256;
@@ -423,9 +622,12 @@ export function Viewport() {
     rt.light.color.set(biome.sun);
     if (s.mode === "orbit") rt.frame();
   }, [
-    s.project.biome,
-    s.project.landscape.extent,
-    s.project.landscape.enabled,
+    s.renderProject.biome,
+    s.renderProject.landscape.extent,
+    s.renderProject.landscape.enabled,
+    s.renderProject.world.enabled,
+    s.renderProject.world.blocks,
+    s.renderProject.world.blockSize,
   ]);
   useEffect(() => {
     if (runtime.current) runtime.current.grid.visible = showGrid;

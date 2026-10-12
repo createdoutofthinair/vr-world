@@ -199,6 +199,8 @@ export function Properties() {
         >
           <option value="flat">Flat roof</option>
           <option value="gable">Gable roof</option>
+          <option value="shed">Shed roof</option>
+          <option value="hip">Hip roof</option>
           <option value="none">Open sky</option>
         </select>
       </label>
@@ -353,7 +355,9 @@ export function Materials() {
     setUploading(true);
     try {
       const asset = await readTexture(file);
-      s.update({ textures: { ...s.project.textures, [role]: asset } });
+      s.update((current) => ({
+        textures: { ...current.textures, [role]: asset },
+      }));
       s.notify(
         `${asset.name} assigned to ${role} and included in project/export.`,
       );
@@ -366,6 +370,54 @@ export function Materials() {
   return (
     <div className="panel-pad">
       <div className="panel-eyebrow">SURFACE LIBRARY</div>
+      <label className="field">
+        Material tint
+        <input
+          type="color"
+          value={specs[role].color}
+          onChange={(e) =>
+            s.update({
+              materialOptions: {
+                ...s.project.materialOptions,
+                [role]: {
+                  color: e.target.value,
+                  roughness: specs[role].roughness ?? 0.84,
+                  metalness: specs[role].metalness ?? 0,
+                  opacity: specs[role].opacity,
+                  scale: specs[role].scale ?? 1,
+                },
+              },
+            })
+          }
+        />
+      </label>
+      {(["roughness", "metalness", "opacity", "scale"] as const).map((key) => (
+        <label className="field" key={key}>
+          {key === "scale" ? "Texture tile size (m)" : key}
+          <input
+            type="number"
+            min={key === "scale" ? 0.1 : key === "opacity" ? 0.03 : 0}
+            max={key === "scale" ? 10 : 1}
+            step={0.05}
+            value={specs[role][key] ?? 1}
+            onChange={(e) =>
+              s.update({
+                materialOptions: {
+                  ...s.project.materialOptions,
+                  [role]: {
+                    color: specs[role].color,
+                    roughness: specs[role].roughness ?? 0.84,
+                    metalness: specs[role].metalness ?? 0,
+                    opacity: specs[role].opacity,
+                    scale: specs[role].scale ?? 1,
+                    [key]: Number(e.target.value),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+      ))}
       <label className="field">
         Default surfaces
         <select
@@ -448,20 +500,107 @@ export function Materials() {
         1024 px, and embedded in saved projects and RWX packages. Uploaded
         surfaces retain their own colours.
       </div>
+      <div className="form-section">Enhanced material maps</div>
+      {(["normal", "roughness", "metalness", "emissive"] as const).map(
+        (kind) => (
+          <label className="small-button full upload-button" key={kind}>
+            {kind} map ·{" "}
+            {s.project.materialMaps[role]?.[kind]?.name ?? "Upload"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                try {
+                  const asset = await readTexture(file);
+                  s.update((current) => ({
+                    materialMaps: {
+                      ...current.materialMaps,
+                      [role]: {
+                        normalConvention: "opengl",
+                        ...current.materialMaps[role],
+                        [kind]: asset,
+                      },
+                    },
+                  }));
+                } catch (error) {
+                  s.notify((error as Error).message);
+                }
+              }}
+            />
+          </label>
+        ),
+      )}
+      <label className="field">
+        Normal convention
+        <select
+          value={s.project.materialMaps[role]?.normalConvention ?? "opengl"}
+          onChange={(e) =>
+            s.update({
+              materialMaps: {
+                ...s.project.materialMaps,
+                [role]: {
+                  ...s.project.materialMaps[role],
+                  normalConvention: e.target.value as "opengl" | "directx",
+                },
+              },
+            })
+          }
+        >
+          <option value="opengl">OpenGL +Y</option>
+          <option value="directx">DirectX −Y</option>
+        </select>
+      </label>
+      <p className="panel-note">
+        Enhanced maps are saved in the editable project and package. The classic
+        RWX preview uses diffuse colour and opacity; PBR shading is not
+        certified for native VP.
+      </p>
     </div>
   );
 }
 export function FloorPlan() {
   const s = useStudio(),
+    [activeLevel, setActiveLevel] = useState(0),
     p = s.project,
     padding = 2,
-    w = p.width + padding * 2,
-    d = p.depth + padding * 2;
+    w = p.world.enabled
+      ? Math.max(
+          ...s.meshes.map((m) =>
+            Math.max(Math.abs(bounds(m).min[0]), Math.abs(bounds(m).max[0])),
+          ),
+        ) *
+          2 +
+        padding * 2
+      : p.width + padding * 2,
+    d = p.world.enabled
+      ? Math.max(
+          ...s.meshes.map((m) =>
+            Math.max(Math.abs(bounds(m).min[2]), Math.abs(bounds(m).max[2])),
+          ),
+        ) *
+          2 +
+        padding * 2
+      : p.depth + padding * 2;
   return (
     <div className="floorplan">
       <div className="panel-eyebrow">
-        GROUND FLOOR <span>{(p.width * p.depth).toFixed(1)} m² footprint</span>
+        LEVEL {Math.min(activeLevel, p.structure.storeys - 1) + 1}{" "}
+        <span>{(p.width * p.depth).toFixed(1)} m² footprint</span>
       </div>
+      <select
+        aria-label="Plan level"
+        value={Math.min(activeLevel, p.structure.storeys - 1)}
+        onChange={(e) => setActiveLevel(Number(e.target.value))}
+      >
+        {Array.from({ length: p.structure.storeys }, (_, i) => (
+          <option key={i} value={i}>
+            Level {i + 1}
+          </option>
+        ))}
+      </select>
       <svg
         viewBox={`${-w / 2} ${-d / 2} ${w} ${d}`}
         aria-label="Generated floor plan with true openings"
@@ -474,6 +613,10 @@ export function FloorPlan() {
               m.id !== "shop-sign" &&
               m.category !== "vegetation" &&
               m.category !== "landscape",
+          )
+          .filter(
+            (m) =>
+              (m.level ?? 0) === Math.min(activeLevel, p.structure.storeys - 1),
           )
           .map((m) => {
             const b = bounds(m),
@@ -576,6 +719,16 @@ export function ExportPanel() {
         <Download size={16} />
         {s.busy ? "Building package…" : "Download RWX package"}
       </button>
+      {s.exportStatus && (
+        <p className="muted small" role="status">
+          {s.exportStatus}
+        </p>
+      )}
+      {s.busy && (
+        <button className="small-button full" onClick={s.cancelExport}>
+          Cancel package build
+        </button>
+      )}
       <button
         className="small-button full"
         disabled={s.busy}
@@ -589,6 +742,22 @@ export function ExportPanel() {
       >
         <Layers3 size={15} />
         Rebuild & inspect exported files
+      </button>
+      <button
+        className="small-button full"
+        disabled={s.busy || s.generating}
+        onClick={async () => {
+          const b = await s.prepareExport("awg-probe");
+          if (b) {
+            s.setView("export");
+            s.setMode("orbit");
+            s.notify(
+              "Preview reconstructed from experimental zipped AWG records. Native units and import remain unverified.",
+            );
+          }
+        }}
+      >
+        Inspect experimental AWG group files
       </button>
       {s.bundle && (
         <>
@@ -878,6 +1047,107 @@ export function PlantStudio() {
         Hide foliage to inspect root, trunk and branch connections. This setting
         also affects the exported package.
       </p>
+      <div className="form-section">Growth recipe</div>
+      <label className="field">
+        Branch generator
+        <select
+          value={p.plants.algorithm}
+          onChange={(e) =>
+            s.update({
+              plants: {
+                ...p.plants,
+                algorithm: e.target.value as typeof p.plants.algorithm,
+              },
+            })
+          }
+        >
+          <option value="rules">Species branching rules</option>
+          <option value="attraction">Space attraction crown</option>
+        </select>
+      </label>
+      <label className="field">
+        Growth stage
+        <select
+          value={p.plants.age}
+          onChange={(e) =>
+            s.update({
+              plants: {
+                ...p.plants,
+                age: e.target.value as typeof p.plants.age,
+              },
+            })
+          }
+        >
+          <option value="sapling">Sapling</option>
+          <option value="mature">Mature</option>
+          <option value="old">Old</option>
+        </select>
+      </label>
+      <label className="field">
+        Mesh quality
+        <select
+          value={p.plants.quality}
+          onChange={(e) =>
+            s.update({
+              plants: {
+                ...p.plants,
+                quality: e.target.value as typeof p.plants.quality,
+              },
+            })
+          }
+        >
+          <option value="full">Full leaves and branch rings</option>
+          <option value="economy">Economy mesh</option>
+        </select>
+      </label>
+      {(
+        [
+          ["height", "Height"],
+          ["crown", "Crown spread"],
+          ["trunk", "Trunk thickness"],
+          ["lean", "Trunk lean"],
+          ["leafDensity", "Leaf density"],
+        ] as const
+      ).map(([key, label]) => (
+        <Range
+          key={key}
+          label={label}
+          value={p.plants[key]}
+          min={key === "lean" ? -0.25 : key === "leafDensity" ? 0.2 : 0.5}
+          max={key === "lean" ? 0.25 : key === "leafDensity" ? 1 : 1.8}
+          step={0.05}
+          unit="×"
+          onChange={(value) =>
+            s.update({ plants: { ...p.plants, [key]: value } })
+          }
+        />
+      ))}
+      <div className="form-section">Prune branch families</div>
+      <p className="muted small">
+        Toggle stable branch IDs. Rules prune a main limb; attraction prunes its
+        descendants. These controls affect woody broadleaf families.
+      </p>
+      <div className="button-row">
+        {Array.from({ length: 24 }, (_, id) => (
+          <button
+            key={id}
+            aria-pressed={p.plants.pruned.includes(id)}
+            onClick={() =>
+              s.update({
+                plants: {
+                  ...p.plants,
+                  pruned: p.plants.pruned.includes(id)
+                    ? p.plants.pruned.filter((n) => n !== id)
+                    : [...p.plants.pruned, id],
+                },
+              })
+            }
+          >
+            {p.plants.pruned.includes(id) ? "× " : ""}
+            {id}
+          </button>
+        ))}
+      </div>
       <div className="form-section">Generated families</div>
       {[...families].map(([family, triangles]) => (
         <div className="plant-family-row" key={family}>
@@ -893,8 +1163,8 @@ export function PlantStudio() {
         exclusions.
       </div>
       <div className="panel-note">
-        Pruning, editable branch graphs and custom species recipes are later
-        Plant Studio steps.
+        Growth, pruning and economy mesh settings are saved and exported.
+        Individual landmark overrides and custom species recipes remain pending.
       </div>
     </div>
   );

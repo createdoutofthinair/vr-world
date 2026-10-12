@@ -40,12 +40,25 @@ export function standardImage(
   spec: MaterialSpec,
   p: Project,
 ): string | undefined {
-  return p.surfaceSource === "standard" ? images.get(spec.pattern) : undefined;
+  return p.surfaceSource === "standard" && spec.role !== "road"
+    ? images.get(spec.pattern)
+    : undefined;
 }
 export function standardSource(spec: MaterialSpec, p: Project) {
-  return p.surfaceSource === "standard" && !p.textures[spec.role]
+  return p.surfaceSource === "standard" &&
+    !p.textures[spec.role] &&
+    spec.role !== "road"
     ? STANDARD_TEXTURES[spec.pattern]
     : undefined;
+}
+export function standardSnapshot(): Record<string, string> {
+  return Object.fromEntries(images);
+}
+export function restoreStandardSnapshot(
+  snapshot: Record<string, string>,
+): void {
+  for (const [pattern, data] of Object.entries(snapshot))
+    if (STANDARD_TEXTURES[pattern]) images.set(pattern, data);
 }
 export async function loadStandardTextures(
   patterns = Object.keys(STANDARD_TEXTURES),

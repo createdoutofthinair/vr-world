@@ -1,0 +1,1019 @@
+{
+  "planVersion": "1.4",
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Resolve risky contracts",
+      "state": "partial",
+      "externalProofPending": true
+    },
+    {
+      "id": "M1",
+      "title": "Application shell and document foundation",
+      "state": "partial",
+      "externalProofPending": false
+    },
+    {
+      "id": "M2",
+      "title": "Structural editing and a basic building",
+      "state": "partial",
+      "externalProofPending": false
+    },
+    {
+      "id": "M3",
+      "title": "First end-to-end shop slice",
+      "state": "partial",
+      "externalProofPending": false
+    },
+    {
+      "id": "M4",
+      "title": "House, stairs, and reliable walkthrough",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/circulation.test.ts; upper-floor and room routes; browser walkthrough pending"
+    },
+    {
+      "id": "M5",
+      "title": "Materials and export hardening",
+      "state": "partial",
+      "externalProofPending": true
+    },
+    {
+      "id": "M6",
+      "title": "Reusable modules and facade systems",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/modules.test.ts; linked definitions, locks and sockets; broader facade tools pending"
+    },
+    {
+      "id": "M7",
+      "title": "Apartments and mixed-use buildings",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/circulation.test.ts; apartments/mixed-use templates; unit overrides pending"
+    },
+    {
+      "id": "M8",
+      "title": "Villas and advanced exterior forms",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/massing.test.ts; connected orthogonal wings; arbitrary forms pending"
+    },
+    {
+      "id": "M9",
+      "title": "Complete retail and interior authoring",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "src/editor/SignStudio.tsx; retail rooms and sign authoring; free layouts pending"
+    },
+    {
+      "id": "M10",
+      "title": "Performance, LOD, and recovery",
+      "state": "partial",
+      "externalProofPending": true,
+      "evidence": "generation/export workers, instancing, performance panel, IndexedDB; LOD and measured gates pending"
+    },
+    {
+      "id": "M11",
+      "title": "Full v1 polish and release",
+      "state": "missing",
+      "externalProofPending": true
+    },
+    {
+      "id": "C0",
+      "title": "Virtual Paradise placement and group spike",
+      "state": "partial",
+      "externalProofPending": true,
+      "evidence": "tests/awg.test.ts and tests/effects.test.ts; independent syntax fixture; native units pending"
+    },
+    {
+      "id": "C1",
+      "title": "Modular road and pavement kit",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/city.test.ts; road, junction and pavement kit"
+    },
+    {
+      "id": "C2",
+      "title": "First seeded neighborhood",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/city.test.ts; deterministic neighborhood and plot locks"
+    },
+    {
+      "id": "C3",
+      "title": "Complete c3 package and AWG partitioning",
+      "state": "partial",
+      "externalProofPending": true,
+      "evidence": "tests/awg.test.ts; c3 assets and zipped AWG probes; native import pending"
+    },
+    {
+      "id": "C4",
+      "title": "Terrain, bridges, and viaducts",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/effects.test.ts; supported bridge; authored viaduct pending"
+    },
+    {
+      "id": "C5",
+      "title": "Districts, curved streets, and richer city forms",
+      "state": "missing",
+      "externalProofPending": false
+    },
+    {
+      "id": "C6",
+      "title": "Large-world rendering and export budgets",
+      "state": "missing",
+      "externalProofPending": true
+    },
+    {
+      "id": "C7",
+      "title": "World release and usability review",
+      "state": "missing",
+      "externalProofPending": true
+    },
+    {
+      "id": "T0",
+      "title": "Contract and export probe",
+      "deliverable": "Parcel/coordinate model, absent-native-terrain assumption, two joined terrain pieces, simple blended bake, one rock",
+      "exit": "Browser geometry and a small target-client export agree; unresolved target behavior is recorded",
+      "state": "partial",
+      "externalProofPending": true
+    },
+    {
+      "id": "T1",
+      "title": "Landforms and editable ground",
+      "deliverable": "Stable sample frame, seeded plains/hills/channel, ordered operations, shared borders, basic collision",
+      "exit": "Reproducible parcel; safe walking and continuous joins; generation cancellation works",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/terrain.test.ts; landforms and persistent sculpt/paint operations"
+    },
+    {
+      "id": "T2",
+      "title": "Geology and rock geometry",
+      "deliverable": "Fractured and stratified recipes, boulders, grounded scatter, local overhang fixture",
+      "exit": "Varied procedural forms pass silhouette/contact review and collision checks",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/massing.test.ts; six geological forms"
+    },
+    {
+      "id": "T3",
+      "title": "Surface generation and splatting",
+      "deliverable": "Procedural layers, licensed/uploaded inputs, automatic masks, paint tools, preview quality modes",
+      "exit": "Surface edits persist, normalize, undo, regenerate, and remain visually coherent",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/terrain.test.ts; normalized layers, actual uploaded map bake"
+    },
+    {
+      "id": "T4",
+      "title": "Landscape/city interfaces",
+      "deliverable": "Road/pad grading, retaining edges, water/banks, bridge supports, final drainage masks",
+      "exit": "Connected walking route across city and natural terrain, with no unresolved seam or support defects",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "terrain grades and creek carve; tests/city.test.ts; full interfaces pending"
+    },
+    {
+      "id": "T5",
+      "title": "Complete terrain export",
+      "deliverable": "UV charting, blended texture bakes, c3 assets, AWG batches, terrain manifest, target preview",
+      "exit": "Actual RWX package reconstructs the parcel with complete dependencies and usable ground",
+      "state": "partial",
+      "externalProofPending": true,
+      "evidence": "tests/terrain.test.ts; serialized terrain bakes; native proof pending"
+    },
+    {
+      "id": "T6",
+      "title": "Budgets and streaming",
+      "deliverable": "Adaptive simplification, render LOD, stable collision streaming, bounded variant/material caches",
+      "exit": "Measured performance/memory on reference scenes; no terrain holes or abrupt LOD failures along the route",
+      "state": "missing",
+      "externalProofPending": true
+    },
+    {
+      "id": "T7",
+      "title": "Visual acceptance and recovery",
+      "deliverable": "All fixtures, target inspection, portable project, recovery and usability pass",
+      "exit": "Recorded evidence meets terrain and city acceptance; pending features remain explicitly pending",
+      "state": "missing",
+      "externalProofPending": true
+    },
+    {
+      "id": "E0",
+      "title": "Target effects proof",
+      "deliverable": "Motion AST, VP move fixtures, rotate semantics investigation, one frame-sequence test, texture/mask proof",
+      "exit": "Documented capability results and one parsed-package effect compared in VP",
+      "state": "missing",
+      "externalProofPending": true
+    },
+    {
+      "id": "E1",
+      "title": "Plant foundation",
+      "deliverable": "Skeleton/mesh/leaf pipeline, trunk/branch/root attachment, one broadleaf tree, material generation, Plant Studio",
+      "exit": "A reproducible tree inspected from all sides and exported through RWX",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/plant-controls.test.ts; bounded attraction graph, rules, pruning and growth"
+    },
+    {
+      "id": "E2",
+      "title": "Distinct plant families",
+      "deliverable": "Conifer, palm, fern, shrub, grass, succulents/cacti, vine, fungi, alien forms",
+      "exit": "Recognizable silhouettes, complete attachments, quality/budget controls",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/environment.test.ts; thirteen families"
+    },
+    {
+      "id": "E3",
+      "title": "Themes and distribution",
+      "deliverable": "Five starter theme families, biome masks, suitability/exclusions, variant banks, uploaded plant textures",
+      "exit": "Repeatable mixed-theme parcel with editable density and preserved locks",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "theme/biome separation and growth recipe; masks/pins pending"
+    },
+    {
+      "id": "E4",
+      "title": "Creeks and paths",
+      "deliverable": "Directed water graph, beds/banks, trails/junctions, crossings, moisture and vegetation integration",
+      "exit": "Walkable connected route and continuous supported waterways",
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/effects.test.ts; directed creek and bank trail; destination graph pending"
+    },
+    {
+      "id": "E5",
+      "title": "Waterfalls and effects",
+      "deliverable": "Fall geometry, pool/foam, verified move/rotate presets, gated texture sequences, effect inspector",
+      "exit": "Same delivered effect shown in browser Export Preview and selected VP client",
+      "state": "partial",
+      "externalProofPending": true,
+      "evidence": "tests/effects.test.ts; emitted waterfall geometry/move timing; native proof pending"
+    },
+    {
+      "id": "E6",
+      "title": "Optimization and package",
+      "deliverable": "Selected export qualities, atlases, collision policy, group/motion bounds, dependency closure",
+      "exit": "Budget report, no missing files, no duplicated LODs, no unprefixed assets",
+      "state": "partial",
+      "externalProofPending": true,
+      "evidence": "plant economy, c3 export, motion group bounds; streaming/LOD pending"
+    },
+    {
+      "id": "E7",
+      "title": "Environment release",
+      "deliverable": "Theme examples, final compatibility report, complete native comparison and download workflow",
+      "exit": "Acceptance checklist below passes for supported profiles",
+      "state": "missing",
+      "externalProofPending": true
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC-001",
+      "section": "29.1 Workspace",
+      "requirement": "Panes dock, split, resize, maximize, reopen, and restore reliably.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-002",
+      "section": "29.1 Workspace",
+      "requirement": "No pane, context menu, or dialog becomes unreachable after resizing.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-003",
+      "section": "29.1 Workspace",
+      "requirement": "3D camera and project state survive pane changes.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-004",
+      "section": "29.1 Workspace",
+      "requirement": "Text inputs and walkthrough shortcuts cannot interfere with each other.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-005",
+      "section": "29.1 Workspace",
+      "requirement": "Keyboard/menu alternatives exist for key mouse operations.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-006",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Shops, houses, flats, villas, and mixed-use examples are genuinely configurable.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-007",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "The Kennedy preset is either reference-verified or explicitly marked pending.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-008",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Windows and doors create real openings with correct visible sides.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-009",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Floors, ceilings, roofs, and joins have no unintended gaps or overlapping faces.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-010",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Required rooms and upper floors are reachable at human scale.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-011",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Stairs fit their openings and have usable landings/headroom.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-012",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Furnishings and signage retain correct attachments and avoid required paths.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-013",
+      "section": "29.2 Buildings and interiors",
+      "requirement": "Preset regeneration preserves locks and local overrides.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-014",
+      "section": "29.3 Materials",
+      "requirement": "Bundled assets have recorded source, license, and hashes.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-015",
+      "section": "29.3 Materials",
+      "requirement": "Textures tile at sensible real-world scale and use correct normal/color conventions.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-016",
+      "section": "29.3 Materials",
+      "requirement": "Starter projects work with stored assets when providers are unavailable.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-017",
+      "section": "29.3 Materials",
+      "requirement": "User-uploaded textures and PBR map sets can be assigned, replaced, saved, reopened, and exported as `c3-` assets.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-018",
+      "section": "29.3 Materials",
+      "requirement": "Missing/unsupported materials produce actionable diagnostics.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-019",
+      "section": "29.3 Materials",
+      "requirement": "Billboard text is legible and rasterizes consistently for export.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-020",
+      "section": "29.4 Export",
+      "requirement": "Every advertised RWX profile names its tested consumer/version.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-021",
+      "section": "29.4 Export",
+      "requirement": "Units, axes, winding, UV orientation, and texture references pass fixtures.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-022",
+      "section": "29.4 Export",
+      "requirement": "Geometry and materials match the selected export scope and frozen revision.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-023",
+      "section": "29.4 Export",
+      "requirement": "All required textures and masks are included in the package.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-024",
+      "section": "29.4 Export",
+      "requirement": "Static door poses and target interaction limitations are clearly stated.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-025",
+      "section": "29.4 Export",
+      "requirement": "Local re-import and external-viewer inspection both pass for claimed features.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-026",
+      "section": "29.4 Export",
+      "requirement": "Exported instance expansion and target budgets are reported accurately.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-027",
+      "section": "29.4 Export",
+      "requirement": "Portable project export preserves editable semantics and assets.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-028",
+      "section": "29.5 Quality and resilience",
+      "requirement": "Agreed browser/hardware fixtures meet measured performance targets.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-029",
+      "section": "29.5 Quality and resilience",
+      "requirement": "Extended edit/walk/export sessions do not show accumulating resource leaks.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-030",
+      "section": "29.5 Quality and resilience",
+      "requirement": "Context loss, interrupted jobs, corrupt imports, and storage limits are handled.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-031",
+      "section": "29.5 Quality and resilience",
+      "requirement": "Visual inspection is recorded for the release revision.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-032",
+      "section": "29.5 Quality and resilience",
+      "requirement": "No feature is labeled verified solely because the application builds successfully.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-033",
+      "section": "44.1 City generation",
+      "requirement": "The same seed and pinned versions reproduce the same semantic layout and placement scene.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-034",
+      "section": "44.1 City generation",
+      "requirement": "Chunk generation order does not create mismatched road/terrain boundaries.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-035",
+      "section": "44.1 City generation",
+      "requirement": "Streets form the intended connected network; grade-separated crossings are distinct.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-036",
+      "section": "44.1 City generation",
+      "requirement": "Every required parcel/building entrance has an actual usable street/pavement route.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-037",
+      "section": "44.1 City generation",
+      "requirement": "Crossroads, kerbs, pavements, markings, and driveways join without unintended gaps or overlap.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-038",
+      "section": "44.1 City generation",
+      "requirement": "Manual changes and locks survive scoped regeneration, or produce an explicit conflict.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-039",
+      "section": "44.1 City generation",
+      "requirement": "Bridges have valid approaches, continuous decks, grounded supports, and usable clearance below.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-040",
+      "section": "44.1 City generation",
+      "requirement": "The style/texture distribution looks coherent in human-scale views.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-041",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "Users can import their own single textures and supported map sets for general surfaces.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-042",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "Imported originals and required optimized derivatives survive project save/reopen.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-043",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "User assets are not silently published, converted to CC0, or lost when a provider is offline.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-044",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "Repeated pieces share appropriate unique RWX assets while placements stay individually represented.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-045",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "Texture changes do not unintentionally repaint glass, trims, kerbs, or other material regions.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-046",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "All emitted model/texture/mask/group filenames and references use the required `c3-` prefix.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-047",
+      "section": "44.2 Texture uploads and objects",
+      "requirement": "Filename collision, case sensitivity, archive names, and dependency closure are validated.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-048",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "The exact VP build/renderer/profile and tested world settings are recorded.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-049",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "A verified AWG serializer uses the correct record/encoding conventions.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-050",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "World-placement units and rotations are calibrated separately from RWX geometry units.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-051",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Group bounds include transformed geometry, not just object origins.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-052",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Groups stay within configured tested budgets and are split deterministically when needed.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-053",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "No current hard maximum radius or count is claimed without supporting evidence.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-054",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Editable and hosted-group modes have separate, correct placement instructions.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-055",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Reassembling batches reproduces the intended geometry once, with correct pivots and seams.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-056",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Group anchors can be visually hidden without hiding their content in the browser approximation.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-057",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Each emitted command is supported by the browser subset and tested for the target export profile.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-058",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "Actual VP inspection checks texture appearance, collision, load behavior, and group visibility.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-059",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "The package includes placements/groups as well as models and textures.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-060",
+      "section": "44.3 Virtual Paradise groups and reconstruction",
+      "requirement": "The selected parcel uses the generated RWX ground; native target-world terrain absence is a documented installation precondition.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-061",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "The package supplies its own complete parcel ground; native target-world terrain is not used for shape, textures, or collision.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-062",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Terrain and rock geometry are generated from recorded recipes, seeds, and edits.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-063",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "A procedural-only surface preset works without downloaded texture maps; open/uploaded textures also work as optional inputs.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-064",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Landforms use meaningful scale and preserve coherent features across render/export boundaries.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-065",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Erosion and drainage handle shared regional dependencies rather than producing independent tile artifacts.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-066",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Rock families produce distinct structural forms with convincing silhouettes and grounded placements.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-067",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Strata, weathering, surface exposure, and debris are coherent within a geological region.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-068",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Roads, pavements, foundations, retaining structures, banks, and bridges fit the resolved terrain.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-069",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Ground painting and locked landmarks survive regeneration and undo.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-070",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Browser splatting and procedural materials have a complete baked RWX delivery path.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-071",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Cliff and overhang bakes use valid surface UVs, not a stretched top-down projection.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-072",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Every exported model, texture, mask, and group uses the required `c3-` namespace.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-073",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Export preserves all intended ground surfaces exactly once, including visible sides and required undersides.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-074",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Terrain seams remain acceptable after target unit/coordinate quantization and texture filtering.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-075",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Visual LOD changes do not destabilize collision or remove the player's ground.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-076",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Each target placement has the intended collision/solidity behavior in the actual VP client.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-077",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Exported materials preserve the intended blend within the documented target shading limitations.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-078",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Parcel edges follow their declared contracts and stay within owned bounds.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-079",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "Texture memory, draw cost, unique variants, object count, group extent, and package size are measured separately.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-080",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "All required fixtures pass human-scale visual review as well as structural checks.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-081",
+      "section": "52.2 Required acceptance checklist",
+      "requirement": "The editable project reopens with recipes, uploaded textures, paint operations, and committed outputs intact.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-082",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Virtual Paradise is identified as the primary import target throughout the UI, export manifest, and installation instructions.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-083",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Users can inspect and walk through the full generated build before import.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-084",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Export Preview reconstructs emitted files rather than displaying the source mesh cache.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-085",
+      "section": "55.3 Acceptance additions",
+      "requirement": "The preview uses the packaged terrain bakes and target material profile.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-086",
+      "section": "55.3 Acceptance additions",
+      "requirement": "All emitted commands have a supported preview path or a clearly reported gap.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-087",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Visibility, solidity, group anchors, and member content remain correctly separated.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-088",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Preview-only door behavior is not presented as delivered target behavior.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-089",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Target coordinate and rotation conversions agree with reference fixtures.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-090",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Historical AW group/cell assumptions are not silently imposed on VP.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-091",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Texture and group dependencies resolve through the required `c3-` names.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-092",
+      "section": "55.3 Acceptance additions",
+      "requirement": "Known appearance/physics differences are shown before package download.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-093",
+      "section": "55.3 Acceptance additions",
+      "requirement": "A named VP build/renderer has been used for the claimed compatibility level.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-094",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "World themes and UI themes are separate, and all five required world families are available.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-095",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "A theme changes coordinated content and rules, including plants, materials, paths, and architecture.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-096",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Users can create custom themes and upload bark, leaf, ground, foam, sign, and other textures.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-097",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Plant geometry is procedural and reproducible from saved recipes and versions.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-098",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Trunks, roots, branches, petioles, leaves, fronds, and succulent segments connect coherently.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-099",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Tree silhouettes remain convincing from the ground, above, and with foliage hidden.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-100",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Desert, jungle, fantasy, and sci-fi recipes use distinct construction rules where appropriate.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-101",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Scatter responds to ground, moisture, obstacles, path clearance, and biome masks.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-102",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Manual pruning, pinned plants, uploaded materials, and locked regions survive regeneration.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-103",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Bark UV scale, foliage masks, mip edges, backside rendering, and atlas dependencies pass inspection.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-104",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Plant budgets include triangles, materials, overdraw, texture memory, placements, and collision cost.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-105",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Export does not create an object for every leaf or place all available LODs simultaneously.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-106",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Creeks have continuous beds/banks, valid direction, sensible pools, and connected crossings.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-107",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Paths reach their destinations and preserve walking width, slope, steps, and headroom.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-108",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Waterfalls meet their lip/pool, have complete surrounding terrain, and conceal motion resets.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-109",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Moving water is achievable with delivered geometry/actions and does not require an authoring-only shader.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-110",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "`move` and `rotate` use a documented/tested VP profile; AW-derived assumptions are labeled individually.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-111",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Texture animation is enabled only for a verified grammar, image sequence, timing, and mask convention.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-112",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Runtime names cannot accidentally control an unrelated copy of a grouped effect.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-113",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Motion bounds, nonsolid detail, and moving-obstacle collision are represented honestly.",
+      "state": "unverified"
+    },
+    {
+      "id": "AC-114",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "The same exported actions drive Export Preview; unsupported behavior is visible before download.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-115",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Every emitted model, texture, mask, animation frame, group, and archive uses the `c3-` prefix.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-116",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "The complete offline package includes required textures, actions, placements, recipes, and provenance.",
+      "state": "partial",
+      "evidence": "0.3 implementation and automated fixtures recorded in IMPLEMENTATION-STATUS.md; complete/native/browser acceptance remains open."
+    },
+    {
+      "id": "AC-117",
+      "section": "63.3 Acceptance checklist",
+      "requirement": "Seeded reference scenes have been imported and compared in the named VP client for each claimed capability.",
+      "state": "unverified"
+    }
+  ],
+  "checkpoint": "0.3.0",
+  "updated": "2026-10-12"
+}

@@ -1,4 +1,12 @@
-import { MeshData, Vec3, random, seedFor } from "./project";
+import {
+  MeshData,
+  Vec3,
+  random,
+  seedFor,
+  PlantSettings,
+  DEFAULT_PLANTS,
+} from "./project";
+import { colonize } from "./colonization";
 import { MeshBuilder, addV, lerpV, mulV } from "./mesh";
 export type PlantFamily =
   | "broadleaf"
@@ -29,6 +37,7 @@ export function generatePlant(
   family: PlantFamily,
   seed: number,
   scale = 1,
+  options: PlantSettings = DEFAULT_PLANTS,
 ): PlantResult {
   const r = random(seedFor(seed, "skeleton")),
     f = random(seedFor(seed, "foliage"));
@@ -37,6 +46,30 @@ export function generatePlant(
     leaves = new MeshBuilder(),
     light = new MeshBuilder();
   const skeleton: PlantSkeleton[] = [];
+  const woody = ["broadleaf", "canopy", "acacia", "ancient"].includes(family),
+    crownScale =
+      options.crown *
+      (woody && options.age === "sapling"
+        ? 0.6
+        : woody && options.age === "old"
+          ? 1.08
+          : 1),
+    heightScale =
+      options.height *
+      (woody && options.age === "sapling"
+        ? 0.65
+        : woody && options.age === "old"
+          ? 1.08
+          : 1),
+    trunkScale =
+      options.trunk *
+      (woody && options.age === "sapling"
+        ? 0.7
+        : woody && options.age === "old"
+          ? 1.3
+          : 1),
+    presence = random(seedFor(seed, "leaf-presence"));
+  let leafIndex = 0;
   const branch = (
     points: Vec3[],
     radii: number[],
@@ -53,11 +86,26 @@ export function generatePlant(
         parent: i === 1 ? parent : skeleton.length - 1,
       });
     }
-    target.tube(points, radii, sides);
+    target.tube(
+      points,
+      radii.map((radius) => (radius * trunkScale) / crownScale),
+      options.quality === "economy"
+        ? Math.max(3, Math.floor(sides * 0.65))
+        : sides,
+    );
     return index + points.length - 2;
   };
-  const leaf = (a: Vec3, b: Vec3, w: number, curl = 0.08) =>
-    (f() < 0.24 ? light : leaves).leaf(a, b, w, curl);
+  const leaf = (a: Vec3, b: Vec3, w: number, curl = 0.08, choose = f) => {
+    const tone = choose(),
+      present = presence(),
+      index = leafIndex++;
+    if (
+      present > options.leafDensity ||
+      (options.quality === "economy" && index % 2)
+    )
+      return;
+    (tone < 0.24 ? light : leaves).leaf(a, b, w, curl);
+  };
   if (["broadleaf", "canopy", "acacia", "ancient"].includes(family)) {
     const h =
       family === "canopy"
@@ -103,61 +151,118 @@ export function generatePlant(
           true,
         );
     }
-    for (let j = 0; j < 13; j++) {
-      const a = j * 2.39996 + r() * 0.35;
-      const level = family === "acacia" ? 0.61 : 0.47 + (j / 13) * 0.36;
-      const anchor = lerpV(
-        axis[Math.floor(level * 6)],
-        axis[Math.floor(level * 6) + 1],
-        (level * 6) % 1,
-      );
-      const reach =
-        (family === "canopy" ? 2.5 : family === "ancient" ? 2.8 : 2.35) *
-        (1 - j / 24) *
-        (0.8 + r() * 0.4);
-      const end: Vec3 = [
-        anchor[0] + Math.cos(a) * reach,
-        h * (family === "acacia" ? 0.87 : level + 0.19) + r() * 0.2,
-        anchor[2] + Math.sin(a) * reach,
-      ];
-      const middle = lerpV(anchor, end, 0.56);
-      middle[1] -= 0.28;
-      const parent = branch(
-        [anchor, middle, end],
-        [0.13 * (1 - j / 20), 0.075, 0.025],
-        Math.min(main, Math.floor(level * 6)),
-      );
-      for (let k = 0; k < 4; k++) {
-        const ba = a + (k - 1.5) * 0.62;
-        const start = lerpV(middle, end, 0.3 + k * 0.2);
-        const finish: Vec3 = [
-          start[0] + Math.cos(ba) * (0.6 + r() * 0.5),
-          start[1] + (family === "acacia" ? 0.14 : 0.25 + r() * 0.4),
-          start[2] + Math.sin(ba) * (0.6 + r() * 0.5),
-        ];
-        branch([start, finish], [0.024, 0.007], parent, wood, 4);
-        for (let q = 0; q < (family === "acacia" ? 5 : 8); q++) {
-          const at = lerpV(
-              start,
-              finish,
-              0.1 + q * (family === "acacia" ? 0.21 : 0.125),
-            ),
-            angle = ba + (q % 2 ? 1 : -1) * (1.0 + f() * 0.5);
-          const size =
-            (family === "canopy" ? 0.86 : family === "acacia" ? 0.4 : 0.7) *
-            (0.8 + f() * 0.4);
-          leaf(
-            at,
-            [
-              at[0] + Math.cos(angle) * size,
-              at[1] + 0.08 + (f() - 0.5) * 0.32,
-              at[2] + Math.sin(angle) * size,
-            ],
-            size * (family === "acacia" ? 0.4 : 0.58),
+    const limbCount =
+      options.age === "sapling" ? 7 : options.age === "old" ? 18 : 13;
+    if (options.algorithm === "attraction") {
+      const guide = Array.from({ length: 4 }, (_, i) => {
+          const t = 0.38 + i * 0.12;
+          return lerpV(
+            axis[Math.floor(t * 6)],
+            axis[Math.floor(t * 6) + 1],
+            (t * 6) % 1,
           );
+        }),
+        nodes = colonize(
+          seedFor(seed, "attraction"),
+          h,
+          family === "canopy" ? 3.2 : 2.6,
+          guide,
+        ),
+        counts = nodes.map(() => 1),
+        parents = new Map<number, number>(),
+        pruned = new Set(options.pruned);
+      for (let i = nodes.length - 1; i >= 0; i--)
+        if (nodes[i].parent !== null) counts[nodes[i].parent!] += counts[i];
+      for (let i = 0; i < 4; i++)
+        parents.set(i, Math.floor((0.38 + i * 0.12) * 6));
+      for (let i = 4; i < nodes.length; i++) {
+        const node = nodes[i],
+          parent = node.parent!;
+        if (pruned.has(parent)) pruned.add(i);
+        if (pruned.has(i)) continue;
+        const start = nodes[parent].position,
+          radius = Math.max(0.012, Math.sqrt(counts[i]) * 0.018),
+          index = branch(
+            [start, node.position],
+            [radius, radius * 0.7],
+            parents.get(parent) ?? main,
+            wood,
+            4,
+          );
+        parents.set(i, index);
+        if (counts[i] === 1)
+          for (let j = 0; j < 4; j++) {
+            const angle = j * Math.PI * 0.5 + f(),
+              end = addV(node.position, [
+                Math.cos(angle) * 0.65,
+                0.12 + (f() - 0.5) * 0.2,
+                Math.sin(angle) * 0.65,
+              ]);
+            leaf(node.position, end, 0.32);
+          }
+      }
+    } else
+      for (let j = 0; j < limbCount; j++) {
+        const r = random(seedFor(seed, `limb-${j}`)),
+          f = random(seedFor(seed, `limb-foliage-${j}`));
+        if (options.pruned.includes(j)) continue;
+        const a = j * 2.39996 + r() * 0.35;
+        const level =
+          family === "acacia" ? 0.61 : 0.47 + (j / limbCount) * 0.36;
+        const anchor = lerpV(
+          axis[Math.floor(level * 6)],
+          axis[Math.floor(level * 6) + 1],
+          (level * 6) % 1,
+        );
+        const reach =
+          (family === "canopy" ? 2.5 : family === "ancient" ? 2.8 : 2.35) *
+          (1 - j / 24) *
+          (0.8 + r() * 0.4);
+        const end: Vec3 = [
+          anchor[0] + Math.cos(a) * reach,
+          h * (family === "acacia" ? 0.87 : level + 0.19) + r() * 0.2,
+          anchor[2] + Math.sin(a) * reach,
+        ];
+        const middle = lerpV(anchor, end, 0.56);
+        middle[1] -= 0.28;
+        const parent = branch(
+          [anchor, middle, end],
+          [0.13 * (1 - j / 20), 0.075, 0.025],
+          Math.min(main, Math.floor(level * 6)),
+        );
+        for (let k = 0; k < 4; k++) {
+          const ba = a + (k - 1.5) * 0.62;
+          const start = lerpV(middle, end, 0.3 + k * 0.2);
+          const finish: Vec3 = [
+            start[0] + Math.cos(ba) * (0.6 + r() * 0.5),
+            start[1] + (family === "acacia" ? 0.14 : 0.25 + r() * 0.4),
+            start[2] + Math.sin(ba) * (0.6 + r() * 0.5),
+          ];
+          branch([start, finish], [0.024, 0.007], parent, wood, 4);
+          for (let q = 0; q < (family === "acacia" ? 5 : 8); q++) {
+            const at = lerpV(
+                start,
+                finish,
+                0.1 + q * (family === "acacia" ? 0.21 : 0.125),
+              ),
+              angle = ba + (q % 2 ? 1 : -1) * (1.0 + f() * 0.5);
+            const size =
+              (family === "canopy" ? 0.86 : family === "acacia" ? 0.4 : 0.7) *
+              (0.8 + f() * 0.4);
+            leaf(
+              at,
+              [
+                at[0] + Math.cos(angle) * size,
+                at[1] + 0.08 + (f() - 0.5) * 0.32,
+                at[2] + Math.sin(angle) * size,
+              ],
+              size * (family === "acacia" ? 0.4 : 0.58),
+              0.08,
+              f,
+            );
+          }
         }
       }
-    }
     if (family === "canopy") {
       const vine: Vec3[] = Array.from({ length: 24 }, (_, i) => {
         const y = (i / 23) * 0.6,
@@ -480,16 +585,26 @@ export function generatePlant(
       "vegetation",
     ),
   ].filter((m) => m.positions.length);
+  const transform = (point: Vec3): Vec3 => [
+    (point[0] * crownScale + point[1] * options.lean) * scale,
+    point[1] * heightScale * scale,
+    point[2] * crownScale * scale,
+  ];
   for (const mesh of meshes)
-    mesh.positions = mesh.positions.map((v) => v * scale);
+    for (let i = 0; i < mesh.positions.length; i += 3)
+      mesh.positions.splice(
+        i,
+        3,
+        ...transform(mesh.positions.slice(i, i + 3) as Vec3),
+      );
   return {
     family,
     meshes,
     skeleton: skeleton.map((s) => ({
       ...s,
-      start: mulV(s.start, scale),
-      end: mulV(s.end, scale),
-      radius: s.radius * scale,
+      start: transform(s.start),
+      end: transform(s.end),
+      radius: s.radius * scale * trunkScale,
     })),
   };
 }

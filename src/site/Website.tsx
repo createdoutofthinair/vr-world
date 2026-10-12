@@ -24,7 +24,7 @@ const features = [
   {
     icon: Box,
     title: "Build from the smallest piece.",
-    text: "Shape a building with real wall thickness, doors, windows, floors, and roofs. Change its proportions and watch the pieces fit.",
+    text: "Build shops, homes, apartments and connected villas. Configure storeys, stairs, true openings, roofs and reusable modules.",
     tag: "AVAILABLE NOW",
   },
   {
@@ -54,7 +54,7 @@ const features = [
   {
     icon: Trees,
     title: "Grow from a room to a world.",
-    text: "Five architectural kits, independent biomes, procedural trees and plants, owned terrain, and clear entrance paths. Shape the landscape around your building.",
+    text: "Generate seeded neighborhoods with roads and pavements. Shape owned terrain, grow biome-specific vegetation and connect creeks, bridges and waterfalls.",
     tag: "AVAILABLE NOW",
   },
 ];

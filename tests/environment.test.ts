@@ -163,7 +163,7 @@ test("All themed entrance routes are walkable, including raised jungle steps", (
 test("Walking follows emitted sloped terrain without jumping to the parcel maximum height", () => {
   const p = preset("house", "temperate");
   p.landscape.density = 0;
-  const mesh = buildScene(p).filter((m) => m.id === "site-ground");
+  const mesh = buildScene(p).filter((m) => m.surfaceMesh);
   const x = p.width / 2 + 5,
     z = -p.depth / 2 - 4;
   const startY = groundHeight(p, x, z) + 1.68;
@@ -197,7 +197,7 @@ test("Export reconstruction retains all plants, lowercase dependencies, terrain 
   const p = preset("house", "jungle");
   p.landscape.density = 0.3;
   const png =
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6zqkAAAAASUVORK5CYII=";
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=";
   for (const role of MATERIAL_ROLES)
     p.textures[role] = {
       name: "fixture.png",

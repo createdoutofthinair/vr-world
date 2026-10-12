@@ -1,5 +1,206 @@
+import { decodePNG } from "./png";
 export type Theme = "temperate" | "desert" | "jungle" | "fantasy" | "scifi";
-export type Archetype = "shop" | "house" | "villa";
+export type Archetype = "shop" | "house" | "villa" | "flats" | "mixed";
+export interface StructureSettings {
+  storeys: number;
+  stair: "u" | "straight";
+  doorAngle: number;
+  doorPoses: Record<string, number>;
+  footprint: "rectangle" | "l" | "u" | "courtyard";
+  windowWidth: number;
+  windowHeight: number;
+  windowSill: number;
+  balcony: boolean;
+  interior: "shell" | "furnished";
+}
+export interface WorldSettings {
+  enabled: boolean;
+  blocks: number;
+  blockSize: number;
+  roadWidth: number;
+  sidewalkWidth: number;
+  parkRatio: number;
+  locks: Record<
+    string,
+    {
+      seed: number;
+      archetype: Archetype;
+      theme: Theme;
+      storeys: number;
+      park?: boolean;
+    }
+  >;
+}
+export const DEFAULT_WORLD: WorldSettings = {
+  enabled: false,
+  blocks: 2,
+  blockSize: 36,
+  roadWidth: 6,
+  sidewalkWidth: 1.8,
+  parkRatio: 0.2,
+  locks: {},
+};
+export type GroundLayer = "grass" | "soil" | "rock" | "sand";
+export interface GroundOperation {
+  id: string;
+  x: number;
+  z: number;
+  radius: number;
+  strength: number;
+  kind: "raise" | "lower" | "flatten" | "paint";
+  layer: GroundLayer;
+  locked: boolean;
+}
+export interface TerrainSettings {
+  form: "plain" | "hills" | "ridge" | "basin" | "terraces";
+  amplitude: number;
+  wavelength: number;
+  direction: number;
+  erosion: number;
+  geology: "boulder" | "fractured" | "stratified" | "columnar";
+  splats: boolean;
+  texelsPerMeter: number;
+  edits: GroundOperation[];
+}
+export interface EffectSettings {
+  creek: boolean;
+  waterfall: boolean;
+  trail: boolean;
+  bridge: boolean;
+  motion: boolean;
+  rotationCandidate: boolean;
+}
+export interface KitDefinition {
+  id: string;
+  name: string;
+  kind: "wall" | "window" | "door" | "slab" | "column" | "beam";
+  width: number;
+  height: number;
+  depth: number;
+}
+export interface KitInstance {
+  id: string;
+  definition: string;
+  origin: Vec3;
+  yaw: number;
+  parent?: string;
+  parentSocket?: "left" | "right" | "top" | "bottom";
+  socket?: "left" | "right" | "top" | "bottom";
+  overrides: Partial<Pick<KitDefinition, "width" | "height" | "depth">>;
+  locked: boolean;
+}
+export interface KitSettings {
+  buildingEnabled: boolean;
+  definitions: KitDefinition[];
+  instances: KitInstance[];
+}
+export const DEFAULT_KIT: KitSettings = {
+  buildingEnabled: true,
+  definitions: [
+    {
+      id: "window-bay",
+      name: "Window wall bay",
+      kind: "window",
+      width: 4,
+      height: 3.2,
+      depth: 0.22,
+    },
+    {
+      id: "plain-wall",
+      name: "Plain wall bay",
+      kind: "wall",
+      width: 4,
+      height: 3.2,
+      depth: 0.22,
+    },
+    {
+      id: "door-bay",
+      name: "Door wall bay",
+      kind: "door",
+      width: 4,
+      height: 3.2,
+      depth: 0.22,
+    },
+    {
+      id: "floor-bay",
+      name: "Floor slab",
+      kind: "slab",
+      width: 4,
+      height: 0.2,
+      depth: 4,
+    },
+    {
+      id: "column",
+      name: "Support column",
+      kind: "column",
+      width: 0.2,
+      height: 3.2,
+      depth: 0.2,
+    },
+    {
+      id: "beam",
+      name: "Support beam",
+      kind: "beam",
+      width: 4,
+      height: 0.2,
+      depth: 0.22,
+    },
+  ],
+  instances: [],
+};
+export interface PlantSettings {
+  algorithm: "rules" | "attraction";
+  quality: "full" | "economy";
+  age: "sapling" | "mature" | "old";
+  height: number;
+  crown: number;
+  trunk: number;
+  lean: number;
+  leafDensity: number;
+  pruned: number[];
+}
+export const DEFAULT_PLANTS: PlantSettings = {
+  algorithm: "rules",
+  quality: "full",
+  age: "mature",
+  height: 1,
+  crown: 1,
+  trunk: 1,
+  lean: 0,
+  leafDensity: 1,
+  pruned: [],
+};
+export const DEFAULT_TERRAIN: TerrainSettings = {
+  form: "hills",
+  amplitude: 1,
+  wavelength: 24,
+  direction: 20,
+  erosion: 4,
+  geology: "boulder",
+  splats: false,
+  texelsPerMeter: 16,
+  edits: [],
+};
+export const DEFAULT_EFFECTS: EffectSettings = {
+  creek: false,
+  waterfall: false,
+  trail: false,
+  bridge: false,
+  motion: false,
+  rotationCandidate: false,
+};
+export const DEFAULT_STRUCTURE: StructureSettings = {
+  storeys: 1,
+  stair: "u",
+  doorAngle: 90,
+  doorPoses: {},
+  footprint: "rectangle",
+  windowWidth: 1.8,
+  windowHeight: 1.25,
+  windowSill: 1,
+  balcony: false,
+  interior: "furnished",
+};
 export type BuildingMaterialRole =
   "wall" | "floor" | "roof" | "trim" | "glass" | "ground" | "sign";
 export const MATERIAL_ROLES = [
@@ -18,6 +219,10 @@ export const MATERIAL_ROLES = [
   "path",
   "accent",
   "fabric",
+  "road",
+  "marking",
+  "water",
+  "foam",
 ] as const;
 export type MaterialRole = (typeof MATERIAL_ROLES)[number];
 export type Biome = "temperate" | "arid" | "tropical" | "woodland" | "alien";
@@ -155,10 +360,50 @@ export interface TextureAsset {
   width: number;
   height: number;
 }
+export interface MaterialOptions {
+  color: string;
+  roughness: number;
+  metalness: number;
+  opacity: number;
+  scale: number;
+}
+export interface MaterialMaps {
+  normal?: TextureAsset;
+  roughness?: TextureAsset;
+  metalness?: TextureAsset;
+  emissive?: TextureAsset;
+  normalConvention: "opengl" | "directx";
+}
+export interface SignSlot {
+  id: string;
+  kind: "fascia" | "blade" | "wall" | "pavement" | "roof";
+  width: number;
+  height: number;
+  text: string;
+  asset: TextureAsset;
+  artwork?: TextureAsset;
+  settings?: {
+    background: string;
+    color: string;
+    font: "sans-serif" | "serif" | "monospace";
+    fit: "contain" | "cover";
+    padding: number;
+    border: boolean;
+  };
+}
 export interface Project {
-  schemaVersion: 2;
-  generatorVersion: "0.2.0";
-  migratedFrom?: "0.1.0";
+  schemaVersion: 3;
+  generatorVersion: "0.3.0";
+  migratedFrom?: "0.1.0" | "0.2.0";
+  structure: StructureSettings;
+  world: WorldSettings;
+  terrain: TerrainSettings;
+  effects: EffectSettings;
+  kit: KitSettings;
+  materialOptions: Partial<Record<MaterialRole, MaterialOptions>>;
+  materialMaps: Partial<Record<MaterialRole, MaterialMaps>>;
+  signs: SignSlot[];
+  plants: PlantSettings;
   biome: Biome;
   landscape: LandscapeSettings;
   architectureDetails: boolean;
@@ -173,7 +418,7 @@ export interface Project {
   wallThickness: number;
   doorWidth: number;
   windows: boolean;
-  roof: "flat" | "gable" | "none";
+  roof: "flat" | "gable" | "shed" | "hip" | "none";
   furnished: boolean;
   sign: string;
   textures: Partial<Record<MaterialRole, TextureAsset>>;
@@ -195,6 +440,9 @@ export interface MaterialSpec {
     | "panels"
     | "fabric";
   opacity: number;
+  roughness?: number;
+  metalness?: number;
+  scale?: number;
 }
 export interface MeshData {
   id: string;
@@ -208,6 +456,14 @@ export interface MeshData {
     | "vegetation"
     | "landscape";
   walkable?: boolean;
+  level?: number;
+  doorId?: string;
+  materialColor?: string;
+  action?: string;
+  textureRef?: string;
+  surfaceMesh?: boolean;
+  surfacePatch?: { x: number; z: number; width: number; depth: number };
+  bakedTexture?: TextureAsset;
   origin: Vec3;
   positions: number[];
   uvs: number[];
@@ -216,8 +472,17 @@ export interface MeshData {
   solid: boolean;
 }
 export const DEFAULT_PROJECT: Project = {
-  schemaVersion: 2,
-  generatorVersion: "0.2.0",
+  schemaVersion: 3,
+  generatorVersion: "0.3.0",
+  structure: { ...DEFAULT_STRUCTURE },
+  world: { ...DEFAULT_WORLD, locks: {} },
+  terrain: { ...DEFAULT_TERRAIN, edits: [] },
+  effects: { ...DEFAULT_EFFECTS },
+  kit: structuredClone(DEFAULT_KIT),
+  materialOptions: {},
+  materialMaps: {},
+  signs: [],
+  plants: { ...DEFAULT_PLANTS, pruned: [] },
   biome: "temperate",
   landscape: { ...DEFAULT_LANDSCAPE },
   architectureDetails: true,
@@ -319,6 +584,10 @@ export function materialsFor(
     ...BIOMES[project.biome].colors,
     accent: project.theme === "scifi" ? "#74c7ca" : "#b29660",
     fabric: "#c7b48c",
+    road: "#35383b",
+    marking: "#eee7d5",
+    water: "#39777d",
+    foam: "#dae6dd",
   };
   const patterns: Partial<Record<MaterialRole, MaterialSpec["pattern"]>> = {
     wall:
@@ -346,6 +615,10 @@ export function materialsFor(
     rock: "stone",
     path: project.theme === "scifi" ? "panels" : "stone",
     fabric: "fabric",
+    road: "soil",
+    marking: "solid",
+    water: "solid",
+    foam: "solid",
   };
   return Object.fromEntries(
     MATERIAL_ROLES.map((role) => [
@@ -355,12 +628,62 @@ export function materialsFor(
         color:
           project.textures[role] || role === "sign" ? "#ffffff" : colors[role],
         pattern: patterns[role] ?? "solid",
-        opacity: role === "glass" ? 0.3 : 1,
+        opacity: role === "glass" ? 0.3 : role === "water" ? 0.8 : 1,
+        roughness: role === "glass" ? 0.15 : 0.84,
+        metalness: role === "trim" ? 0.1 : 0,
+        scale: 1,
+        ...project.materialOptions[role],
       },
     ]),
   ) as Record<MaterialRole, MaterialSpec>;
 }
 
+const validatedImages = new WeakMap<
+  TextureAsset,
+  { dataUrl: string; width: number; height: number }
+>();
+export function validateTextureAsset(input: unknown): TextureAsset {
+  const asset = input as TextureAsset;
+  if (
+    !asset ||
+    typeof asset.name !== "string" ||
+    asset.name.length > 150 ||
+    typeof asset.dataUrl !== "string" ||
+    asset.dataUrl.length > 2000000 ||
+    !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(asset.dataUrl) ||
+    !Number.isInteger(asset.width) ||
+    !Number.isInteger(asset.height) ||
+    asset.width < 1 ||
+    asset.height < 1 ||
+    asset.width > 1024 ||
+    asset.height > 1024
+  )
+    throw new Error("Invalid normalized PNG asset.");
+  let valid = validatedImages.get(asset);
+  if (!valid || valid.dataUrl !== asset.dataUrl) {
+    const image = decodePNG(
+      Uint8Array.from(atob(asset.dataUrl.split(",")[1]), (c) =>
+        c.charCodeAt(0),
+      ),
+    );
+    valid = {
+      dataUrl: asset.dataUrl,
+      width: image.width,
+      height: image.height,
+    };
+    validatedImages.set(asset, valid);
+  }
+  if (asset.width !== valid.width || asset.height !== valid.height)
+    throw new Error("Asset dimensions do not match its PNG.");
+  const clean = {
+    name: asset.name,
+    dataUrl: asset.dataUrl,
+    width: asset.width,
+    height: asset.height,
+  };
+  validatedImages.set(clean, valid);
+  return clean;
+}
 export function validateProject(input: unknown): Project {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("Project must be an object.");
@@ -368,8 +691,17 @@ export function validateProject(input: unknown): Project {
   if (p.schemaVersion === 1 && p.generatorVersion === "0.1.0") {
     p = {
       ...p,
-      schemaVersion: 2,
-      generatorVersion: "0.2.0",
+      schemaVersion: 3,
+      generatorVersion: "0.3.0",
+      structure: { ...DEFAULT_STRUCTURE },
+      world: { ...DEFAULT_WORLD, locks: {} },
+      terrain: { ...DEFAULT_TERRAIN, edits: [] },
+      effects: { ...DEFAULT_EFFECTS },
+      kit: structuredClone(DEFAULT_KIT),
+      materialOptions: {},
+      materialMaps: {},
+      signs: [],
+      plants: { ...DEFAULT_PLANTS, pruned: [] },
       migratedFrom: "0.1.0",
       biome: DEFAULT_BIOME[p.theme as Theme],
       landscape: { ...DEFAULT_LANDSCAPE },
@@ -377,7 +709,23 @@ export function validateProject(input: unknown): Project {
       surfaceSource: "standard",
     };
   }
-  if (p.schemaVersion !== 2 || p.generatorVersion !== "0.2.0")
+  if (p.schemaVersion === 2 && p.generatorVersion === "0.2.0")
+    p = {
+      ...p,
+      schemaVersion: 3,
+      generatorVersion: "0.3.0",
+      migratedFrom: "0.2.0",
+      structure: { ...DEFAULT_STRUCTURE },
+      world: { ...DEFAULT_WORLD, locks: {} },
+      terrain: { ...DEFAULT_TERRAIN, edits: [] },
+      effects: { ...DEFAULT_EFFECTS },
+      kit: structuredClone(DEFAULT_KIT),
+      materialOptions: {},
+      materialMaps: {},
+      signs: [],
+      plants: { ...DEFAULT_PLANTS, pruned: [] },
+    };
+  if (p.schemaVersion !== 3 || p.generatorVersion !== "0.3.0")
     throw new Error("Unsupported project/generator version.");
   const number = (key: string, lo: number, hi: number) => {
     const n = p[key];
@@ -430,14 +778,173 @@ export function validateProject(input: unknown): Project {
       t.height > 1024
     )
       throw new Error("Invalid normalized PNG texture.");
+    let valid = validatedImages.get(t);
+    if (!valid || valid.dataUrl !== t.dataUrl) {
+      const image = decodePNG(
+        Uint8Array.from(atob(t.dataUrl.split(",")[1]), (c) => c.charCodeAt(0)),
+      );
+      valid = { dataUrl: t.dataUrl, width: image.width, height: image.height };
+      validatedImages.set(t, valid);
+    }
+    if (valid.width !== t.width || valid.height !== t.height)
+      throw new Error("Texture dimensions do not match PNG bytes.");
     textures[role as MaterialRole] = {
       name: t.name,
       dataUrl: t.dataUrl,
       width: t.width,
       height: t.height,
     };
+    validatedImages.set(textures[role as MaterialRole]!, valid);
   }
   const seed = number("seed", 0, 2_147_483_647);
+  if (!Array.isArray(p.signs) || p.signs.length > 20)
+    throw new Error("Invalid sign slots.");
+  const signs: SignSlot[] = (p.signs as SignSlot[]).map((slot) => {
+    if (
+      !slot ||
+      !/^[a-z0-9-]+$/.test(slot.id) ||
+      !["fascia", "blade", "wall", "pavement", "roof"].includes(slot.kind) ||
+      typeof slot.text !== "string" ||
+      slot.text.length > 120 ||
+      !Number.isFinite(slot.width) ||
+      slot.width < 0.5 ||
+      slot.width > 8 ||
+      !Number.isFinite(slot.height) ||
+      slot.height < 0.3 ||
+      slot.height > 3
+    )
+      throw new Error("Invalid sign slot.");
+    const asset = slot.asset;
+    if (
+      !asset ||
+      typeof asset.name !== "string" ||
+      typeof asset.dataUrl !== "string" ||
+      asset.dataUrl.length > 2000000 ||
+      !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(asset.dataUrl)
+    )
+      throw new Error("Invalid sign artwork.");
+    let valid = validatedImages.get(asset);
+    if (!valid || valid.dataUrl !== asset.dataUrl) {
+      const image = decodePNG(
+        Uint8Array.from(atob(asset.dataUrl.split(",")[1]), (c) =>
+          c.charCodeAt(0),
+        ),
+      );
+      valid = {
+        dataUrl: asset.dataUrl,
+        width: image.width,
+        height: image.height,
+      };
+      validatedImages.set(asset, valid);
+    }
+    if (asset.width !== valid.width || asset.height !== valid.height)
+      throw new Error("Invalid sign artwork dimensions.");
+    if (slot.kind === "roof" && p.roof === "none")
+      throw new Error("Roof signs need a supporting roof.");
+    const settings = slot.settings;
+    if (
+      settings &&
+      (!/^#[a-f0-9]{6}$/i.test(settings.background) ||
+        !/^#[a-f0-9]{6}$/i.test(settings.color) ||
+        !["sans-serif", "serif", "monospace"].includes(settings.font) ||
+        !["contain", "cover"].includes(settings.fit) ||
+        !Number.isFinite(settings.padding) ||
+        settings.padding < 0 ||
+        settings.padding > 0.2 ||
+        typeof settings.border !== "boolean")
+    )
+      throw new Error("Invalid sign raster settings.");
+    return {
+      ...slot,
+      asset: validateTextureAsset(asset),
+      artwork: slot.artwork ? validateTextureAsset(slot.artwork) : undefined,
+      settings: settings ? { ...settings } : undefined,
+    };
+  });
+  if (new Set(signs.map((s) => s.id)).size !== signs.length)
+    throw new Error("Duplicate sign slot.");
+  const materialOptions: Project["materialOptions"] = {},
+    materialMaps: Project["materialMaps"] = {};
+  if (
+    !p.materialOptions ||
+    typeof p.materialOptions !== "object" ||
+    Array.isArray(p.materialOptions) ||
+    !p.materialMaps ||
+    typeof p.materialMaps !== "object" ||
+    Array.isArray(p.materialMaps)
+  )
+    throw new Error("Invalid material settings.");
+  for (const [role, option] of Object.entries(p.materialOptions)) {
+    const m = option as MaterialOptions;
+    if (
+      !MATERIAL_ROLES.includes(role as MaterialRole) ||
+      !m ||
+      !/^#[a-f0-9]{6}$/i.test(m.color) ||
+      ![m.roughness, m.metalness, m.opacity, m.scale].every(Number.isFinite) ||
+      m.roughness < 0 ||
+      m.roughness > 1 ||
+      m.metalness < 0 ||
+      m.metalness > 1 ||
+      m.opacity < 0.03 ||
+      m.opacity > 1 ||
+      m.scale < 0.1 ||
+      m.scale > 10
+    )
+      throw new Error("Invalid material options.");
+    materialOptions[role as MaterialRole] = { ...m };
+  }
+  for (const [role, value] of Object.entries(p.materialMaps)) {
+    const maps = value as MaterialMaps;
+    if (
+      !MATERIAL_ROLES.includes(role as MaterialRole) ||
+      !maps ||
+      !["opengl", "directx"].includes(maps.normalConvention)
+    )
+      throw new Error("Invalid PBR map set.");
+    const clean: MaterialMaps = { normalConvention: maps.normalConvention };
+    for (const kind of [
+      "normal",
+      "roughness",
+      "metalness",
+      "emissive",
+    ] as const) {
+      const asset = maps[kind];
+      if (asset) {
+        if (
+          typeof asset.name !== "string" ||
+          asset.name.length > 150 ||
+          typeof asset.dataUrl !== "string" ||
+          asset.dataUrl.length > 2000000 ||
+          !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(asset.dataUrl)
+        )
+          throw new Error("Invalid PBR asset.");
+        let valid = validatedImages.get(asset);
+        if (!valid || valid.dataUrl !== asset.dataUrl) {
+          const decoded = decodePNG(
+            Uint8Array.from(atob(asset.dataUrl.split(",")[1]), (c) =>
+              c.charCodeAt(0),
+            ),
+          );
+          valid = {
+            dataUrl: asset.dataUrl,
+            width: decoded.width,
+            height: decoded.height,
+          };
+          validatedImages.set(asset, valid);
+        }
+        if (valid.width !== asset.width || valid.height !== asset.height)
+          throw new Error("Invalid PBR dimensions.");
+        clean[kind] = {
+          name: asset.name,
+          dataUrl: asset.dataUrl,
+          width: asset.width,
+          height: asset.height,
+        };
+        validatedImages.set(clean[kind]!, valid);
+      }
+    }
+    materialMaps[role as MaterialRole] = clean;
+  }
   if (!Number.isInteger(seed)) throw new Error("Seed must be an integer.");
   const l = p.landscape as Record<string, unknown>;
   if (!l || typeof l !== "object" || Array.isArray(l))
@@ -454,10 +961,340 @@ export function validateProject(input: unknown): Project {
     !["scrub", "succulent", "oasis"].includes(l.aridRecipe as string)
   )
     throw new Error("Invalid landscape recipe.");
+  const structure = p.structure as StructureSettings;
+  const plants = p.plants as PlantSettings;
+  if (
+    !plants ||
+    !["rules", "attraction"].includes(plants.algorithm) ||
+    !["full", "economy"].includes(plants.quality) ||
+    !["sapling", "mature", "old"].includes(plants.age) ||
+    ![
+      plants.height,
+      plants.crown,
+      plants.trunk,
+      plants.lean,
+      plants.leafDensity,
+    ].every(Number.isFinite) ||
+    plants.height < 0.5 ||
+    plants.height > 1.8 ||
+    plants.crown < 0.5 ||
+    plants.crown > 1.8 ||
+    plants.trunk < 0.5 ||
+    plants.trunk > 1.8 ||
+    Math.abs(plants.lean) > 0.25 ||
+    plants.leafDensity < 0.2 ||
+    plants.leafDensity > 1 ||
+    !Array.isArray(plants.pruned) ||
+    plants.pruned.length > 24 ||
+    plants.pruned.some((n) => !Number.isInteger(n) || n < 0 || n > 23)
+  )
+    throw new Error("Invalid plant recipe.");
+  const kit = p.kit as KitSettings;
+  if (
+    !kit ||
+    typeof kit.buildingEnabled !== "boolean" ||
+    !Array.isArray(kit.definitions) ||
+    !Array.isArray(kit.instances) ||
+    kit.definitions.length > 50 ||
+    kit.instances.length > 250
+  )
+    throw new Error("Invalid modular kit.");
+  const definitions: KitDefinition[] = kit.definitions.map((d) => {
+    if (
+      !d ||
+      !/^[a-z0-9-]+$/.test(d.id) ||
+      typeof d.name !== "string" ||
+      d.name.length > 80 ||
+      !["wall", "window", "door", "slab", "column", "beam"].includes(d.kind) ||
+      ![d.width, d.height, d.depth].every(
+        (n) => Number.isFinite(n) && n >= 0.06 && n <= 12,
+      ) ||
+      (["window", "door"].includes(d.kind) &&
+        (d.width < 2 || d.height < 2.6 || d.depth > 0.5))
+    )
+      throw new Error("Invalid kit definition dimensions.");
+    return { ...d };
+  });
+  if (new Set(definitions.map((d) => d.id)).size !== definitions.length)
+    throw new Error("Duplicate module definition.");
+  const instances: KitInstance[] = kit.instances.map((i) => {
+    if (
+      !i ||
+      !/^[a-z0-9-]+$/.test(i.id) ||
+      !definitions.some((d) => d.id === i.definition) ||
+      !Array.isArray(i.origin) ||
+      i.origin.length !== 3 ||
+      !i.origin.every((n) => Number.isFinite(n) && Math.abs(n) <= 500) ||
+      !Number.isFinite(i.yaw) ||
+      Math.abs(i.yaw) > 360 ||
+      i.yaw % 90 !== 0 ||
+      typeof i.locked !== "boolean" ||
+      !i.overrides ||
+      typeof i.overrides !== "object"
+    )
+      throw new Error("Invalid kit instance.");
+    for (const [key, n] of Object.entries(i.overrides))
+      if (
+        !["width", "height", "depth"].includes(key) ||
+        typeof n !== "number" ||
+        !Number.isFinite(n) ||
+        n < 0.06 ||
+        n > 12
+      )
+        throw new Error("Invalid module override.");
+    return {
+      ...i,
+      origin: [...i.origin] as Vec3,
+      overrides: { ...i.overrides },
+    };
+  });
+  if (new Set(instances.map((i) => i.id)).size !== instances.length)
+    throw new Error("Duplicate module instance.");
+  for (const i of instances)
+    if (
+      i.parent &&
+      (!instances.some((v) => v.id === i.parent) ||
+        !["left", "right", "top", "bottom"].includes(i.parentSocket ?? "") ||
+        !["left", "right", "top", "bottom"].includes(i.socket ?? ""))
+    )
+      throw new Error("Invalid module attachment.");
+  const world = p.world as WorldSettings;
+  const terrain = p.terrain as TerrainSettings,
+    effects = p.effects as EffectSettings;
+  if (
+    !terrain ||
+    !effects ||
+    typeof terrain !== "object" ||
+    typeof effects !== "object"
+  )
+    throw new Error("Missing terrain/effect settings.");
+  const terrainNumber = (
+    key: keyof TerrainSettings,
+    lo: number,
+    hi: number,
+  ) => {
+    const n = terrain[key];
+    if (typeof n !== "number" || !Number.isFinite(n) || n < lo || n > hi)
+      throw new Error(`Invalid terrain ${key}.`);
+    return n;
+  };
+  if (
+    !["plain", "hills", "ridge", "basin", "terraces"].includes(terrain.form) ||
+    !["boulder", "fractured", "stratified", "columnar"].includes(
+      terrain.geology,
+    ) ||
+    typeof terrain.splats !== "boolean" ||
+    !Array.isArray(terrain.edits) ||
+    terrain.edits.length > 500
+  )
+    throw new Error("Invalid terrain recipe.");
+  const edits: GroundOperation[] = terrain.edits.map((edit) => {
+    if (
+      !edit ||
+      !/^[a-z0-9-]+$/.test(edit.id) ||
+      !["raise", "lower", "flatten", "paint"].includes(edit.kind) ||
+      !["grass", "soil", "rock", "sand"].includes(edit.layer) ||
+      typeof edit.locked !== "boolean" ||
+      ![edit.x, edit.z, edit.radius, edit.strength].every(Number.isFinite) ||
+      Math.abs(edit.x) > 500 ||
+      Math.abs(edit.z) > 500 ||
+      edit.radius < 0.5 ||
+      edit.radius > 20 ||
+      edit.strength < 0 ||
+      edit.strength > 5
+    )
+      throw new Error("Invalid terrain edit.");
+    return { ...edit };
+  });
+  if (new Set(edits.map((e) => e.id)).size !== edits.length)
+    throw new Error("Duplicate terrain operation identity.");
+  for (const key of Object.keys(DEFAULT_EFFECTS))
+    if (typeof effects[key as keyof EffectSettings] !== "boolean")
+      throw new Error("Invalid effect setting.");
+  if (effects.waterfall && (!effects.creek || world.enabled))
+    throw new Error("Waterfall presets need a creek in parcel mode.");
+  if (effects.creek && !world.enabled && !l.enabled)
+    throw new Error("Creeks require the owned landscape mesh.");
+  if (effects.creek && !world.enabled && (l.extent as number) < 8)
+    throw new Error("Creek banks need at least 8 m of landscape extent.");
+  if (
+    !world ||
+    typeof world !== "object" ||
+    typeof world.enabled !== "boolean" ||
+    !world.locks ||
+    typeof world.locks !== "object" ||
+    Array.isArray(world.locks)
+  )
+    throw new Error("Invalid world settings.");
+  const worldNumber = (key: keyof WorldSettings, lo: number, hi: number) => {
+    const n = world[key];
+    if (typeof n !== "number" || !Number.isFinite(n) || n < lo || n > hi)
+      throw new Error(`Invalid world ${key}.`);
+    return n;
+  };
+  const blocks = worldNumber("blocks", 1, 3);
+  if (!Number.isInteger(blocks))
+    throw new Error("World blocks must be an integer.");
+  const locks: WorldSettings["locks"] = {};
+  if (Object.keys(world.locks).length > 100)
+    throw new Error("Too many building locks.");
+  for (const [id, record] of Object.entries(world.locks)) {
+    if (
+      !/^block-\d+-\d+-plot-\d+$/.test(id) ||
+      !record ||
+      !Number.isInteger(record.seed) ||
+      record.seed < 0 ||
+      record.seed > 2147483647 ||
+      !["house", "shop", "villa", "flats", "mixed"].includes(
+        record.archetype,
+      ) ||
+      !["temperate", "desert", "jungle", "fantasy", "scifi"].includes(
+        record.theme,
+      ) ||
+      !Number.isInteger(record.storeys) ||
+      record.storeys < 1 ||
+      record.storeys > 4
+    )
+      throw new Error("Invalid locked building.");
+    locks[id] = { ...record };
+  }
+  if (!structure || typeof structure !== "object")
+    throw new Error("Missing structure settings.");
+  const structural = (key: keyof StructureSettings, lo: number, hi: number) => {
+    const n = structure[key];
+    if (typeof n !== "number" || !Number.isFinite(n) || n < lo || n > hi)
+      throw new Error(`Invalid structure ${key}.`);
+    return n;
+  };
+  const storeys = structural("storeys", 1, 6);
+  if (!Number.isInteger(storeys))
+    throw new Error("Storeys must be an integer.");
+  if (storeys > 1 && (width < 7 || depth < 8))
+    throw new Error(
+      "Multi-storey circulation needs at least a 7 × 8 m footprint.",
+    );
+  const stairSteps = Math.ceil((height + 0.22) / 0.18);
+  if (structure.footprint !== "rectangle") {
+    if (
+      !["house", "villa"].includes(p.archetype as string) ||
+      width < 10 ||
+      depth < 9
+    )
+      throw new Error(
+        "Connected wings are supported for houses/villas with at least a 10 × 9 m footprint.",
+      );
+    if (!["flat", "hip", "none"].includes(p.roof as string))
+      throw new Error(
+        "Connected wings currently support flat or joined hip roofs.",
+      );
+    if (
+      storeys > 1 &&
+      width / 3 < 2.55 + number("wallThickness", 0.12, 0.45) * 2 + 0.3
+    )
+      throw new Error(
+        "The wing is too narrow for its stair core. Increase width.",
+      );
+  }
+  if (
+    (p.archetype === "flats" || p.archetype === "mixed") &&
+    (width < 10 ||
+      depth -
+        number("wallThickness", 0.12, 0.45) * 2 -
+        0.15 -
+        0.95 -
+        Math.ceil(stairSteps / 2) * 0.28 -
+        0.95 <
+        3.8)
+  )
+    throw new Error(
+      "Apartment templates need a wider/deeper footprint for complete units and communal circulation.",
+    );
+  if (
+    storeys > 1 &&
+    (structure.stair === "straight" ? stairSteps : Math.ceil(stairSteps / 2)) *
+      0.28 +
+      2.2 +
+      number("wallThickness", 0.12, 0.45) * 2 >
+      depth
+  )
+    throw new Error(
+      "Stair flights and landings do not fit. Increase depth or choose U stairs.",
+    );
+  if (
+    !["u", "straight"].includes(structure.stair) ||
+    !["rectangle", "l", "u", "courtyard"].includes(structure.footprint) ||
+    !["shell", "furnished"].includes(structure.interior) ||
+    typeof structure.balcony !== "boolean"
+  )
+    throw new Error("Invalid structure recipe.");
+  const doorPoses: Record<string, number> = {};
+  if (
+    !structure.doorPoses ||
+    typeof structure.doorPoses !== "object" ||
+    Array.isArray(structure.doorPoses) ||
+    Object.keys(structure.doorPoses).length > 1000
+  )
+    throw new Error("Invalid door poses.");
+  for (const [id, angle] of Object.entries(structure.doorPoses)) {
+    if (
+      !/^[a-z0-9-]+$/.test(id) ||
+      typeof angle !== "number" ||
+      !Number.isFinite(angle) ||
+      angle < 0 ||
+      angle > 100
+    )
+      throw new Error("Invalid door pose.");
+    doorPoses[id] = angle;
+  }
   return {
-    schemaVersion: 2,
-    generatorVersion: "0.2.0",
-    ...(p.migratedFrom === "0.1.0" ? { migratedFrom: "0.1.0" as const } : {}),
+    schemaVersion: 3,
+    generatorVersion: "0.3.0",
+    kit: { buildingEnabled: kit.buildingEnabled, definitions, instances },
+    materialOptions,
+    materialMaps,
+    signs,
+    plants: { ...plants, pruned: [...new Set(plants.pruned)] },
+    terrain: {
+      form: terrain.form,
+      geology: terrain.geology,
+      splats: terrain.splats,
+      edits,
+      amplitude: terrainNumber("amplitude", 0, 12),
+      wavelength: terrainNumber("wavelength", 10, 80),
+      direction: terrainNumber("direction", 0, 180),
+      erosion: terrainNumber("erosion", 0, 20),
+      texelsPerMeter: terrainNumber("texelsPerMeter", 8, 32),
+    },
+    effects: Object.fromEntries(
+      Object.keys(DEFAULT_EFFECTS).map((key) => [
+        key,
+        effects[key as keyof EffectSettings],
+      ]),
+    ) as unknown as EffectSettings,
+    world: {
+      enabled: world.enabled,
+      blocks,
+      blockSize: worldNumber("blockSize", 32, 48),
+      roadWidth: worldNumber("roadWidth", 4, 10),
+      sidewalkWidth: worldNumber("sidewalkWidth", 1.2, 3),
+      parkRatio: worldNumber("parkRatio", 0, 0.6),
+      locks,
+    },
+    ...(["0.1.0", "0.2.0"].includes(p.migratedFrom as string)
+      ? { migratedFrom: p.migratedFrom as Project["migratedFrom"] }
+      : {}),
+    structure: {
+      storeys,
+      stair: structure.stair,
+      footprint: structure.footprint,
+      interior: structure.interior,
+      balcony: structure.balcony,
+      doorAngle: structural("doorAngle", 0, 100),
+      doorPoses,
+      windowWidth: structural("windowWidth", 0.4, 3),
+      windowHeight: structural("windowHeight", 0.4, 2),
+      windowSill: structural("windowSill", 0.4, 1.5),
+    },
     biome: enumeration("biome", [
       "temperate",
       "arid",
@@ -478,7 +1315,13 @@ export function validateProject(input: unknown): Project {
     },
     name: text("name", 80),
     seed,
-    archetype: enumeration("archetype", ["shop", "house", "villa"]),
+    archetype: enumeration("archetype", [
+      "shop",
+      "house",
+      "villa",
+      "flats",
+      "mixed",
+    ]),
     theme: enumeration("theme", [
       "temperate",
       "desert",
@@ -492,7 +1335,7 @@ export function validateProject(input: unknown): Project {
     wallThickness: number("wallThickness", 0.12, 0.45),
     doorWidth: number("doorWidth", 0.9, 2),
     windows: bool("windows"),
-    roof: enumeration("roof", ["flat", "gable", "none"]),
+    roof: enumeration("roof", ["flat", "gable", "shed", "hip", "none"]),
     furnished: bool("furnished"),
     sign: text("sign", 40),
     textures,
@@ -504,7 +1347,21 @@ export function preset(
 ): Project {
   return {
     ...DEFAULT_PROJECT,
+    kit: structuredClone(DEFAULT_KIT),
+    materialOptions: {},
+    materialMaps: {},
+    signs: [],
+    plants: { ...DEFAULT_PLANTS, pruned: [] },
+    terrain: { ...DEFAULT_TERRAIN, edits: [] },
+    effects: { ...DEFAULT_EFFECTS },
+    world: { ...DEFAULT_WORLD, locks: {} },
     archetype,
+    structure: {
+      ...DEFAULT_STRUCTURE,
+      doorPoses: {},
+      storeys: archetype === "flats" || archetype === "mixed" ? 3 : 1,
+      balcony: archetype === "flats",
+    },
     theme,
     biome: DEFAULT_BIOME[theme],
     landscape: {
@@ -512,20 +1369,35 @@ export function preset(
       density: theme === "jungle" ? 0.8 : theme === "desert" ? 0.4 : 0.65,
     },
     name:
-      archetype === "shop"
-        ? "Corner workshop"
+      archetype === "flats"
+        ? "Garden apartments"
+        : archetype === "mixed"
+          ? "Shop and residences"
+          : archetype === "shop"
+            ? "Corner workshop"
+            : archetype === "house"
+              ? "Little garden house"
+              : "Courtyard villa",
+    width:
+      archetype === "villa" || archetype === "flats" || archetype === "mixed"
+        ? 12
         : archetype === "house"
-          ? "Little garden house"
-          : "Courtyard villa",
-    width: archetype === "villa" ? 12 : archetype === "house" ? 7 : 8,
-    depth: archetype === "villa" ? 10 : archetype === "house" ? 8 : 7,
+          ? 7
+          : 8,
+    depth:
+      archetype === "villa" || archetype === "flats" || archetype === "mixed"
+        ? 10
+        : archetype === "house"
+          ? 8
+          : 7,
     roof:
       theme === "jungle" || theme === "fantasy"
         ? "gable"
         : theme === "scifi" || theme === "desert" || archetype === "shop"
           ? "flat"
           : "gable",
-    sign: archetype === "shop" ? "YOUR LITTLE WORLD" : "",
+    sign:
+      archetype === "shop" || archetype === "mixed" ? "YOUR LITTLE WORLD" : "",
     textures: {},
   };
 }

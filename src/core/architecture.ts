@@ -440,7 +440,10 @@ export function decorateBuilding(p: Project, source: MeshData[]): MeshData[] {
       false,
     );
   }
-  if (p.theme === "temperate" && p.archetype === "shop") {
+  if (
+    p.theme === "temperate" &&
+    (p.archetype === "shop" || p.archetype === "mixed")
+  ) {
     add(
       "shop-awning",
       "Shopfront awning",
@@ -526,7 +529,7 @@ export function decorateBuilding(p: Project, source: MeshData[]): MeshData[] {
       );
   }
   // Real partition with an open 1.2 m passage; furnishing is split into living/sleeping zones.
-  if (p.archetype !== "shop" && w >= 7 && d >= 7) {
+  if (p.archetype !== "shop" && p.archetype !== "mixed" && w >= 7 && d >= 7) {
     const span = (w - 2 * p.wallThickness - 1.2) / 2,
       z = -d * 0.12;
     for (const side of [-1, 1])
@@ -581,7 +584,7 @@ export function decorateBuilding(p: Project, source: MeshData[]): MeshData[] {
             "trim",
           );
     };
-    if (p.archetype === "shop") {
+    if (p.archetype === "shop" || p.archetype === "mixed") {
       furniture(
         "counter-base",
         [w / 2 - 1.05, y, -0.55],

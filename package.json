@@ -1,6 +1,6 @@
 {
   "name": "c3-world-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,6 +14,7 @@
     "dockview-react": "^8.5.1",
     "jszip": "^3.10.2",
     "lucide-react": "^1.55.0",
+    "pako": "1.0.11",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "three": "^0.186.1"

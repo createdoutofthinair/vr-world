@@ -39,7 +39,7 @@ export function serializeRWX(
         .map((v) => numeric(v / EXPORT_PROFILE.metersPerUnit))
         .join(" ")} UV ${mesh.uvs
         .slice(i * 2, i * 2 + 2)
-        .map(numeric)
+        .map((v) => numeric(v / (material.scale ?? 1)))
         .join(" ")}`,
     );
   for (let i = 0; i < mesh.indices.length; i += 3)

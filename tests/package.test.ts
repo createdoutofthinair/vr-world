@@ -10,7 +10,7 @@ import {
   MATERIAL_ROLES,
 } from "../src/core/project";
 const pixel =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6zqkAAAAASUVORK5CYII=";
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=";
 function fixture(): Project {
   const p = structuredClone(DEFAULT_PROJECT);
   for (const role of MATERIAL_ROLES)
@@ -48,10 +48,10 @@ test("Reconstruction fails on a missing emitted texture rather than borrowing th
     /Missing texture/,
   );
 });
-test("Reconstruction executes serialized actions and rejects unimplemented motion", async () => {
+test("Reconstruction executes serialized actions and rejects unsupported animation syntax", async () => {
   const b = await createPackage(fixture()),
     zip = await JSZip.loadAsync(b.bytes);
-  b.manifest.placements[0].action = "create move 0 1 0";
+  b.manifest.placements[0].action = "create animate c3-unknown";
   zip.file("c3-manifest.json", JSON.stringify(b.manifest));
   await assert.rejects(
     readProducedPackage(await zip.generateAsync({ type: "uint8array" })),

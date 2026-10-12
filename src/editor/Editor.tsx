@@ -34,6 +34,14 @@ import {
   PlantStudio,
 } from "./Panels";
 import { Viewport } from "./Viewport";
+import { BuildingStudio } from "./BuildingStudio";
+import { WorldStudio } from "./WorldStudio";
+import { TerrainStudio } from "./TerrainStudio";
+import { EffectStudio } from "./EffectStudio";
+import { KitStudio } from "./KitStudio";
+import { SignStudio } from "./SignStudio";
+import { PerformanceStudio } from "./PerformanceStudio";
+import { HistoryStudio } from "./HistoryStudio";
 import { download } from "../core/package";
 const components = {
   explorer: Explorer,
@@ -46,6 +54,14 @@ const components = {
   viewport: Viewport,
   themes: ThemesPanel,
   plants: PlantStudio,
+  building: BuildingStudio,
+  world: WorldStudio,
+  terrain: TerrainStudio,
+  effects: EffectStudio,
+  kit: KitStudio,
+  signs: SignStudio,
+  performance: PerformanceStudio,
+  history: HistoryStudio,
 };
 const panelNames: Record<string, string> = {
   explorer: "Explorer",
@@ -58,6 +74,14 @@ const panelNames: Record<string, string> = {
   viewport: "3D workspace",
   themes: "Themes & landscape",
   plants: "Plant Studio",
+  building: "Building & circulation",
+  world: "World map & roads",
+  terrain: "Terrain & surfaces",
+  effects: "Waterways & effects",
+  kit: "Modules & sockets",
+  signs: "Signs & artwork",
+  performance: "Performance & proof gates",
+  history: "Versions & recovery",
 };
 function defaultLayout(api: DockviewApi) {
   api.clear();
@@ -125,7 +149,18 @@ function defaultLayout(api: DockviewApi) {
     position: { referencePanel: "viewport", direction: "below" },
     initialHeight: 138,
   });
-  for (const id of ["themes", "plants"])
+  for (const id of [
+    "themes",
+    "plants",
+    "building",
+    "world",
+    "terrain",
+    "effects",
+    "kit",
+    "signs",
+    "performance",
+    "history",
+  ])
     api.addPanel({
       id,
       component: id,
@@ -146,7 +181,7 @@ function EditorInner() {
   const ready = ({ api: a }: DockviewReadyEvent) => {
     api.current = a;
     const key =
-      window.innerWidth < 760 ? "c3-layout-v2-narrow" : "c3-layout-v2";
+      window.innerWidth < 760 ? "c3-layout-v3-narrow" : "c3-layout-v3";
     let restored = false;
     try {
       const saved = localStorage.getItem(key);

@@ -5,7 +5,7 @@ A public website and browser-based modular building workshop, hosted together on
 - [Website](https://createdoutofthinair.github.io/vr-world/)
 - [Editor](https://createdoutofthinair.github.io/vr-world/#editor)
 
-Release **0.2.0** adds coordinated world themes, separate biomes, procedural vegetation, owned terrain, and detailed construction kits. See [implementation status](IMPLEMENTATION-STATUS.md) for exact scope and deployment evidence.
+Release **0.3.0** advances the complete plan with multi-storey buildings, linked modules, seeded cities, terrain authoring, plant growth controls and waterways. See [implementation status](IMPLEMENTATION-STATUS.md) for exact scope and deployment evidence.
 
 ## World scene release
 
@@ -14,18 +14,18 @@ The public site includes the c3 cube identity, original vector city graphics, a 
 The editor includes:
 
 - Dockview panes: Explorer, Properties, Presets, Materials, Floor Plan, Export, Problems, Themes & Landscape, Plant Studio, and 3D workspace.
-- Three configurable single-storey recipes: shop, house, and garden villa with a broad terrace.
+- Shop, house, villa, flats and mixed-use templates, up to six storeys, straight/U stairs with true slab voids, unit interiors, and connected L/U/courtyard wings.
 - Generated wall thickness, true door/window openings, frames, glass, floor, ceiling, flat/gable roofs, supported furniture, bedroom partitions with open passages, and shop signage.
 - Orbit, roof cutaway, linked selection, and pointer-lock walking with collision, sampled mesh terrain, and bounded stair risers.
 - Five architectural kits and five independent biomes. Jungle verandas and canopy plants, desert shade structures and arid flora, timber fantasy buildings and woodland, modular sci-fi frames and alien fans, temperate shops and parkland.
 - Thirteen procedural plant families, seed-stable variant banks, root/branch/leaf geometry, density and growth controls, and foliage inspection.
-- Owned heightfield mesh, entrance path, procedural rocks, building/route placement exclusions, and no dependency on native AW terrain.
+- Seeded bounded street neighborhoods with parks, locked plots, crossings, pavements, lamps and entrances. Owned chunked terrain includes landforms, sculpt/paint edits, six rock families, baked texture splats, creeks, trails, supported bridges and waterfalls.
 - Five bundled CC0 surface maps, procedural material detail, and normalized PNG/JPG/WebP uploads for building, bark, leaf, ground, and other material roles.
-- Undo/redo, local autosave, layout persistence, command palette, editable JSON project download/import.
+- Undo/redo, asset-deduplicated IndexedDB autosave, previous-save recovery, 20 named checkpoints, manual unused-asset cleanup, layout persistence, command palette and editable JSON project download/import.
 - A ZIP export containing `c3-` RWX models, PNG textures, canonical placements, the project, provenance, installation notes, and a validation report.
-- Export Preview rebuilt by reopening the actual generated ZIP, parsing its RWX files, checking texture hashes, and interpreting the emitted `create solid` subset.
+- Export Preview rebuilt from actual generated ZIP files with RWX parsing, texture hashes and a VP move runtime. Bounded rebased groups include experimental AWG3 ZIPs and VPPTSV placement probes. Package builds run in a cancellable worker with progress.
 
-The native VP profile is **provisional**. The browser round trip does not certify native rendering, scale, winding, transparency, or collision. Canonical placement JSON is not an AWG file. The AWG adapter, upper storeys and circulation, city generation, advanced terrain authoring, complete ecology/species controls, waterways, and move/rotate effects are pending.
+The native VP profile is **provisional**. The browser round trip does not certify native rendering, scale, winding, transparency, or collision. Experimental AWG syntax is implemented, but its native units/import are unverified. Rotation is an explicit candidate adapter disabled by default. Free room layouts, per-unit overrides, curved streets/districts, viaduct authoring, landmark plants, streaming/LOD, secondary outputs and complete release acceptance remain pending. The full plan is not complete.
 
 ## Development
 

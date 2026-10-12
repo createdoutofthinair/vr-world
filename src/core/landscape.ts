@@ -1,28 +1,15 @@
 import { MeshData, Project, Vec3, random, seedFor } from "./project";
 import { MeshBuilder } from "./mesh";
 import { generatePlant, PlantFamily, PlantResult } from "./plants";
+import { terrainHeight, terrainMeshes, channelX } from "./terrain";
+import { generateRock } from "./geology";
 
 const smooth = (v: number) => {
   const t = Math.max(0, Math.min(1, v));
   return t * t * (3 - 2 * t);
 };
 export function groundHeight(p: Project, x: number, z: number): number {
-  const edge = Math.max(
-    Math.abs(x) - p.width / 2 - 1.7,
-    Math.abs(z) - p.depth / 2 - 2.4,
-  );
-  const pad = smooth(edge / 4),
-    corridor = z > 0 ? smooth((Math.abs(x) - 1.65) / 2) : 1;
-  const phase = (p.seed % 1000) / 73;
-  return (
-    -0.02 +
-    p.landscape.relief *
-      pad *
-      corridor *
-      (0.62 +
-        0.28 * Math.sin(x * 0.28 + phase) * Math.cos(z * 0.21) +
-        0.12 * Math.sin(x * 0.6 + z * 0.32))
-  );
+  return terrainHeight(p, x, z);
 }
 export function parcelSize(p: Project): [number, number] {
   return [p.width + 2 * p.landscape.extent, p.depth + 2 * p.landscape.extent];
@@ -32,10 +19,11 @@ function plantVariant(
   family: PlantFamily,
   seed: number,
   scale: number,
+  options: Project["plants"],
 ): PlantResult {
-  const key = `${family}:${seed}:${scale}`;
+  const key = `${family}:${seed}:${scale}:${JSON.stringify(options)}`;
   if (!plantCache.has(key)) {
-    plantCache.set(key, generatePlant(family, seed, scale));
+    plantCache.set(key, generatePlant(family, seed, scale, options));
     if (plantCache.size > 80)
       plantCache.delete(plantCache.keys().next().value!);
   }
@@ -43,55 +31,8 @@ function plantVariant(
 }
 export function buildLandscape(p: Project): MeshData[] {
   if (!p.landscape.enabled) return [];
-  const parts: MeshData[] = [],
-    [width, depth] = parcelSize(p),
-    mesh = new MeshBuilder();
-  const nx = Math.ceil(width),
-    nz = Math.ceil(depth);
-  for (let z = 0; z < nz; z++)
-    for (let x = 0; x < nx; x++) {
-      const ax = -width / 2 + (x * width) / nx,
-        bx = -width / 2 + ((x + 1) * width) / nx,
-        az = -depth / 2 + (z * depth) / nz,
-        bz = -depth / 2 + ((z + 1) * depth) / nz;
-      mesh.face([
-        [ax, groundHeight(p, ax, bz), bz],
-        [bx, groundHeight(p, bx, bz), bz],
-        [bx, groundHeight(p, bx, az), az],
-        [ax, groundHeight(p, ax, az), az],
-      ]);
-    }
-  // Low skirt closes the parcel edge; no dependence on native AW terrain.
-  for (const side of [-1, 1])
-    for (let i = 0; i < nx; i++) {
-      const a = -width / 2 + (i * width) / nx,
-        b = -width / 2 + ((i + 1) * width) / nx,
-        z = (side * depth) / 2;
-      const points: Vec3[] = [
-        [a, -0.7, z],
-        [b, -0.7, z],
-        [b, groundHeight(p, b, z), z],
-        [a, groundHeight(p, a, z), z],
-      ];
-      mesh.face(side === 1 ? points : points.reverse());
-    }
-  for (const side of [-1, 1])
-    for (let i = 0; i < nz; i++) {
-      const a = -depth / 2 + (i * depth) / nz,
-        b = -depth / 2 + ((i + 1) * depth) / nz,
-        x = (side * width) / 2;
-      const points: Vec3[] = [
-        [x, -0.7, b],
-        [x, -0.7, a],
-        [x, groundHeight(p, x, a), a],
-        [x, groundHeight(p, x, b), b],
-      ];
-      mesh.face(side === 1 ? points : points.reverse());
-    }
-  parts.push({
-    ...mesh.build("site-ground", "Owned mesh terrain", "ground", "site", true),
-    walkable: true,
-  });
+  const parts: MeshData[] = terrainMeshes(p),
+    [width, depth] = parcelSize(p);
   const path = new MeshBuilder(),
     start = p.depth / 2 + 1.2;
   for (let z = start; z < depth / 2 - 0.1; z += 0.6) {
@@ -122,6 +63,7 @@ export function buildLandscape(p: Project): MeshData[] {
         family,
         seedFor(p.seed, `${family}-${variant % 3}`),
         scale,
+        p.plants,
       ),
       y = groundHeight(p, x, z);
     for (const source of base.meshes) {
@@ -175,6 +117,7 @@ export function buildLandscape(p: Project): MeshData[] {
     const x = (scatter() - 0.5) * (width - 5),
       z = (scatter() - 0.5) * (depth - 5);
     const radius = 2.4 * p.landscape.plantScale;
+    if (p.effects.creek && Math.abs(x - channelX(p, z)) < 3.6) continue;
     if (
       Math.abs(x) < p.width / 2 + radius + 1.8 &&
       Math.abs(z) < p.depth / 2 + radius + 2.8
@@ -217,6 +160,7 @@ export function buildLandscape(p: Project): MeshData[] {
     if (Math.abs(x) < p.width / 2 + 1.5 && Math.abs(z) < p.depth / 2 + 3.8)
       continue;
     if (z > 0 && Math.abs(x) < 2.05) continue;
+    if (p.effects.creek && Math.abs(x - channelX(p, z)) < 3.4) continue;
     if (occupied.some((o) => Math.hypot(x - o.x, z - o.z) < 0.7)) continue;
     const family = understory[placed % understory.length];
     place(
@@ -237,32 +181,38 @@ export function buildLandscape(p: Project): MeshData[] {
     if (Math.abs(x) < p.width / 2 + 1.8 && Math.abs(z) < p.depth / 2 + 4)
       continue;
     if (z > 0 && Math.abs(x) < 2.2) continue;
+    if (p.effects.creek && Math.abs(x - channelX(p, z)) < 3.5) continue;
     if (occupied.some((o) => Math.hypot(x - o.x, z - o.z) < 1.2)) continue;
-    const b = new MeshBuilder(),
-      size = 0.35 + rocks() * 0.85,
-      phase = rocks() * 6;
-    b.lathe(
-      [
-        [0, -0.22],
-        [size * 0.8, -0.15],
-        [size, 0.18],
-        [size * 0.8, size * 0.68],
-        [size * 0.35, size * 0.9],
-        [0, size],
-      ],
-      9,
-      (a, y) => 1 + 0.13 * Math.sin(a * 3 + phase) + 0.09 * Math.cos(a * 5 + y),
-    );
-    parts.push(
-      b.build(
-        `rock-${i}`,
-        "Weathered rock outcrop",
-        "rock",
-        "landscape",
-        true,
-        [x, groundHeight(p, x, z), z],
+    const size = 0.35 + rocks() * 0.85,
+      source = generateRock(
+        p.terrain.geology,
+        seedFor(p.seed, `rock-variant-${i % 4}`),
+        size,
       ),
-    );
+      contact = Math.min(
+        groundHeight(p, x, z),
+        groundHeight(p, x + size * 0.5, z),
+        groundHeight(p, x - size * 0.5, z),
+        groundHeight(p, x, z + size * 0.5),
+        groundHeight(p, x, z - size * 0.5),
+      );
+    parts.push({ ...source, id: `rock-${i}`, origin: [x, contact, z] });
+    if (p.terrain.geology === "fractured" || p.terrain.geology === "stratified")
+      for (let fragment = 0; fragment < 3; fragment++) {
+        const xx = x + (rocks() - 0.5) * size * 3,
+          zz = z + (rocks() - 0.5) * size * 3;
+        const debris = generateRock(
+          "scree",
+          seedFor(p.seed, `debris-${i}-${fragment}`),
+          size * 0.18,
+        );
+        parts.push({
+          ...debris,
+          id: `rock-${i}-debris-${fragment}`,
+          origin: [xx, groundHeight(p, xx, zz), zz],
+          solid: false,
+        });
+      }
   }
   return parts;
 }
