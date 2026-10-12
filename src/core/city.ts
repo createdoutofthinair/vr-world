@@ -71,9 +71,14 @@ export function cityPlan(p: Project): CityPlan {
         const id = `block-${x}-${z}-plot-${k}`,
           rng = random(seedFor(p.seed, id)),
           lock = p.world.locks[id],
-          archetype: Archetype = (
-            ["shop", "house", "flats", "villa", "mixed"] as const
-          )[Math.floor(rng() * 5)],
+          district = p.world.districts?.[`block-${x}-${z}`],
+          choices: readonly Archetype[] =
+            district?.zone === "residential"
+              ? ["house", "villa", "flats"]
+              : district?.zone === "commercial"
+                ? ["shop", "mixed"]
+                : ["shop", "house", "flats", "villa", "mixed"],
+          archetype: Archetype = choices[Math.floor(rng() * choices.length)],
           seed = Math.floor(rng() * 2147483647),
           storeys =
             archetype === "flats" || archetype === "mixed"
@@ -107,11 +112,15 @@ export function cityPlan(p: Project): CityPlan {
             (z + 0.5) * spacing +
             (k < 2 ? -1 : 1) * p.world.blockSize * 0.25,
           yaw: k < 2 ? Math.PI : 0,
-          park: river || lock?.park || (!lock && rng() < p.world.parkRatio),
+          park:
+            river ||
+            lock?.park ||
+            (!lock && (district?.zone === "park" || rng() < p.world.parkRatio)),
           seed: lock?.seed ?? seed,
           archetype: lock?.archetype ?? archetype,
-          theme: lock?.theme ?? p.theme,
-          storeys: lock?.storeys ?? storeys,
+          theme: lock?.theme ?? district?.theme ?? p.theme,
+          storeys:
+            lock?.storeys ?? Math.min(storeys, district?.maxStoreys ?? 4),
         });
       }
   return {

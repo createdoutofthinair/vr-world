@@ -1,6 +1,11 @@
 import { useStudio } from "./store";
 import { cityPlan } from "../core/city";
-import { WorldSettings, THEMES } from "../core/project";
+import {
+  WorldSettings,
+  DistrictRecipe,
+  DistrictZone,
+  THEMES,
+} from "../core/project";
 export function WorldStudio() {
   const s = useStudio(),
     p = s.project,
@@ -87,11 +92,98 @@ export function WorldStudio() {
             }
           >
             <title>
-              {plot.id}: {plot.park ? "park" : plot.archetype}
+              {plot.id}: {plot.park ? "park" : plot.archetype} ·{" "}
+              {p.world.districts?.[plot.id.replace(/-plot-\d+$/, "")]?.zone ??
+                "automatic"}
             </title>
           </rect>
         ))}
       </svg>
+      <div className="form-section">District zoning</div>
+      <p className="panel-note">
+        Each block shares a land-use recipe and architecture. Individual locked
+        plots take precedence. Shrinking the neighborhood retains hidden
+        district recipes for later expansion.
+      </p>
+      {Array.from({ length: p.world.blocks ** 2 }, (_, i) => {
+        const x = i % p.world.blocks,
+          z = Math.floor(i / p.world.blocks),
+          id = `block-${x}-${z}`,
+          saved = p.world.districts?.[id],
+          recipe: DistrictRecipe = saved ?? {
+            zone: "mixed",
+            theme: p.theme,
+            maxStoreys: 4,
+          },
+          update = (patch: Partial<DistrictRecipe>) =>
+            change({
+              districts: {
+                ...p.world.districts,
+                [id]: { ...recipe, ...patch },
+              },
+            });
+        return (
+          <div className="form-section" key={id}>
+            <b>{id}</b>
+            <label className="field">
+              Land use
+              <select
+                value={saved?.zone ?? "automatic"}
+                onChange={(e) => {
+                  if (e.target.value === "automatic") {
+                    const districts = { ...p.world.districts };
+                    delete districts[id];
+                    change({ districts });
+                  } else update({ zone: e.target.value as DistrictZone });
+                }}
+              >
+                {[
+                  "automatic",
+                  "residential",
+                  "commercial",
+                  "mixed",
+                  "park",
+                ].map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </label>
+            {saved && (
+              <>
+                <label className="field">
+                  Architecture
+                  <select
+                    value={recipe.theme}
+                    onChange={(e) =>
+                      update({
+                        theme: e.target.value as DistrictRecipe["theme"],
+                      })
+                    }
+                  >
+                    {Object.entries(THEMES).map(([key, theme]) => (
+                      <option key={key} value={key}>
+                        {theme.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Maximum storeys
+                  <input
+                    type="number"
+                    min={1}
+                    max={4}
+                    value={recipe.maxStoreys}
+                    onChange={(e) =>
+                      update({ maxStoreys: Number(e.target.value) })
+                    }
+                  />
+                </label>
+              </>
+            )}
+          </div>
+        );
+      })}
       {plan.plots.map((plot) => (
         <div className="plant-row" key={plot.id}>
           <span>

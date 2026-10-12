@@ -120,8 +120,9 @@
     {
       "id": "C5",
       "title": "Districts, curved streets, and richer city forms",
-      "state": "missing",
-      "externalProofPending": false
+      "state": "partial",
+      "externalProofPending": false,
+      "evidence": "tests/city.test.ts; saved per-block zoning/architecture/storey caps, compatible seeded plot recipes, lock precedence and dormant district restoration; curved streets/road editing and browser visual review pending"
     },
     {
       "id": "C6",

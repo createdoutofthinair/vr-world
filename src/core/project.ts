@@ -13,6 +13,12 @@ export interface StructureSettings {
   balcony: boolean;
   interior: "shell" | "furnished";
 }
+export type DistrictZone = "residential" | "commercial" | "mixed" | "park";
+export interface DistrictRecipe {
+  zone: DistrictZone;
+  theme: Theme;
+  maxStoreys: number;
+}
 export interface WorldSettings {
   enabled: boolean;
   blocks: number;
@@ -21,6 +27,7 @@ export interface WorldSettings {
   sidewalkWidth: number;
   parkRatio: number;
   viaductHeight: number;
+  districts?: Record<string, DistrictRecipe>;
   locks: Record<
     string,
     {
@@ -1342,6 +1349,34 @@ export function validateProject(input: unknown): Project {
     throw new Error(
       "Viaduct approach exceeds the application grade budget of 12%.",
     );
+  const districts: Record<string, DistrictRecipe> = {};
+  const districtInput = world.districts === undefined ? {} : world.districts;
+  if (
+    !districtInput ||
+    typeof districtInput !== "object" ||
+    Array.isArray(districtInput) ||
+    Object.keys(districtInput).length > 9
+  )
+    throw new Error("Invalid city districts.");
+  for (const [id, recipe] of Object.entries(districtInput)) {
+    if (
+      !/^block-[0-2]-[0-2]$/.test(id) ||
+      !recipe ||
+      !["residential", "commercial", "mixed", "park"].includes(recipe.zone) ||
+      !["temperate", "desert", "jungle", "fantasy", "scifi"].includes(
+        recipe.theme,
+      ) ||
+      !Number.isInteger(recipe.maxStoreys) ||
+      recipe.maxStoreys < 1 ||
+      recipe.maxStoreys > 4
+    )
+      throw new Error("Invalid city district recipe.");
+    districts[id] = {
+      zone: recipe.zone,
+      theme: recipe.theme,
+      maxStoreys: recipe.maxStoreys,
+    };
+  }
   const locks: WorldSettings["locks"] = {};
   if (Object.keys(world.locks).length > 100)
     throw new Error("Too many building locks.");
@@ -1489,6 +1524,7 @@ export function validateProject(input: unknown): Project {
       sidewalkWidth: worldNumber("sidewalkWidth", 1.2, 3),
       parkRatio: worldNumber("parkRatio", 0, 0.6),
       viaductHeight: worldNumber("viaductHeight", 2.5, 5),
+      ...(Object.keys(districts).length ? { districts } : {}),
       locks,
     },
     ...(["0.1.0", "0.2.0", "0.3.0", "0.4.0"].includes(p.migratedFrom as string)

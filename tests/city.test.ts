@@ -99,3 +99,81 @@ test("Parks respect density and foliage; creek parks preserve the carved channel
   for (const plot of river)
     assert(!wet.some((m) => m.id === `${plot.id}-park`));
 });
+
+test("District recipes zone complete blocks while keeping connected streets and locked plots", () => {
+  const p = preset("house");
+  p.world.enabled = true;
+  p.world.blocks = 3;
+  p.world.parkRatio = 0;
+  p.world.districts = {
+    "block-0-0": { zone: "residential", theme: "temperate", maxStoreys: 2 },
+    "block-1-0": { zone: "commercial", theme: "desert", maxStoreys: 1 },
+    "block-2-0": { zone: "park", theme: "jungle", maxStoreys: 1 },
+  };
+  const original = cityPlan(p);
+  assert.equal(original.plots.length, 36);
+  const visited = new Set([original.nodes[0].id]);
+  for (let i = 0; i < original.nodes.length; i++)
+    for (const edge of original.edges)
+      if (visited.has(edge.from) || visited.has(edge.to)) {
+        visited.add(edge.from);
+        visited.add(edge.to);
+      }
+  assert.equal(visited.size, original.nodes.length);
+  for (const plot of original.plots) {
+    if (plot.id.startsWith("block-0-0-")) {
+      assert(["house", "villa", "flats"].includes(plot.archetype));
+      assert(plot.storeys <= 2);
+    }
+    if (plot.id.startsWith("block-1-0-")) {
+      assert(["shop", "mixed"].includes(plot.archetype));
+      assert.equal(plot.theme, "desert");
+      assert.equal(plot.storeys, 1);
+    }
+    if (plot.id.startsWith("block-2-0-")) assert(plot.park);
+  }
+  p.world.locks["block-2-0-plot-0"] = {
+    seed: 123,
+    archetype: "villa",
+    theme: "fantasy",
+    storeys: 3,
+    park: false,
+  };
+  p.seed++;
+  const locked = cityPlan(p).plots.find((v) => v.id === "block-2-0-plot-0")!;
+  assert.equal(locked.park, false);
+  assert.equal(locked.archetype, "villa");
+  assert.equal(locked.theme, "fantasy");
+  assert.equal(locked.storeys, 3);
+  assert.deepEqual(cityPlan(p).edges, original.edges);
+});
+
+test("District recipes persist across validation and retain dormant blocks without changing legacy plans", async () => {
+  const { validateProject } = await import("../src/core/project");
+  const p = preset("house"),
+    before = cityPlan(p);
+  const old = JSON.parse(JSON.stringify(p));
+  delete old.world.districts;
+  assert.deepEqual(cityPlan(validateProject(old)), before);
+  p.world.districts = {
+    "block-2-2": { zone: "park", theme: "jungle", maxStoreys: 1 },
+  };
+  p.world.blocks = 1;
+  const restored = validateProject(JSON.parse(JSON.stringify(p)));
+  assert.deepEqual(restored.world.districts, p.world.districts);
+  restored.world.blocks = 3;
+  assert(
+    cityPlan(restored)
+      .plots.filter((v) => v.id.startsWith("block-2-2-"))
+      .every((v) => v.park),
+  );
+  for (const recipe of [
+    { zone: "unknown", theme: "jungle", maxStoreys: 1 },
+    { zone: "park", theme: "unknown", maxStoreys: 1 },
+    { zone: "park", theme: "jungle", maxStoreys: 99 },
+  ]) {
+    const invalid = JSON.parse(JSON.stringify(p));
+    invalid.world.districts["block-2-2"] = recipe;
+    assert.throws(() => validateProject(invalid), /district/);
+  }
+});
