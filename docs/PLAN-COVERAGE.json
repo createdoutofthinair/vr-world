@@ -122,7 +122,7 @@
       "title": "Districts, curved streets, and richer city forms",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "tests/city.test.ts; saved per-block zoning/architecture/storey caps, compatible seeded plot recipes, lock precedence and dormant district restoration; curved streets/road editing and browser visual review pending"
+      "evidence": "tests/city.test.ts; tests/package.test.ts; saved district recipes and bounded internal street-axis edits, actual span/parcel/pavement/terrain updates, locked recipes and dormant edit restoration; emitted RWX bounds verified; arbitrary roads/curves and visual review pending"
     },
     {
       "id": "C6",

@@ -14,6 +14,15 @@ export function viaductPlan(p: Project): ViaductPlan | null {
   if (!p.effects.viaduct) return null;
   if (!p.world.enabled || p.world.blocks !== 3)
     throw new Error("Viaduct needs a three-block neighborhood.");
+  if (
+    p.world.roadOffsets &&
+    Object.values(p.world.roadOffsets).some((axis) =>
+      Object.values(axis).some((v) => v !== 0),
+    )
+  )
+    throw new Error(
+      "The fixed viaduct preset does not support shifted streets. Reset street offsets first.",
+    );
   const spacing =
       p.world.blockSize + p.world.roadWidth + 2 * p.world.sidewalkWidth,
     x0 = -1.5 * spacing,

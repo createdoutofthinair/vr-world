@@ -91,16 +91,8 @@ function infrastructureMask(
 ): number {
   if (p.world.enabled) {
     const plan = city ?? cityPlan(p),
-      spacing = plan.spacing,
-      start = (-p.world.blocks * spacing) / 2,
-      roadX = Math.abs(
-        ((((x - start + spacing / 2) % spacing) + spacing) % spacing) -
-          spacing / 2,
-      ),
-      roadZ = Math.abs(
-        ((((z - start + spacing / 2) % spacing) + spacing) % spacing) -
-          spacing / 2,
-      ),
+      roadX = Math.min(...plan.nodes.map((n) => Math.abs(x - n.x))),
+      roadZ = Math.min(...plan.nodes.map((n) => Math.abs(z - n.z))),
       distance =
         Math.min(roadX, roadZ) - p.world.roadWidth / 2 - p.world.sidewalkWidth;
     let mask = smooth(distance / 3);

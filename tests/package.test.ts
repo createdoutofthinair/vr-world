@@ -214,3 +214,30 @@ test("Emitted viaduct package retains deck surfaces, grounded supports and walki
   assert(Math.abs(end[1] - (plan.heightAt(end[0]) + 0.125 + 1.68)) < 0.1);
   assert(bundle.files.some((f) => f.includes("c3-metal-")));
 });
+
+test("Shifted city roads and entrance paths retain exact joins in the emitted RWX package", async () => {
+  const p = fixture();
+  p.world.enabled = true;
+  p.world.blocks = 2;
+  p.world.roadOffsets = { x: { "1": 3 }, z: { "1": -2 } };
+  p.landscape.density = 0;
+  const source = buildScene(p, false).filter(
+    (m) =>
+      m.id.startsWith("street-") ||
+      m.id.startsWith("junction-") ||
+      m.id.endsWith("-entrance-path"),
+  );
+  const bundle = await createPackage(p, {
+    scope: "selected",
+    selected: source.map((m) => m.id),
+  });
+  assert.equal(bundle.meshes.length, source.length);
+  for (const mesh of bundle.meshes) {
+    const expected = bounds(source.find((m) => m.id === mesh.id)!),
+      actual = bounds(mesh);
+    for (let axis = 0; axis < 3; axis++) {
+      assert(Math.abs(actual.min[axis] - expected.min[axis]) < 1e-5);
+      assert(Math.abs(actual.max[axis] - expected.max[axis]) < 1e-5);
+    }
+  }
+});

@@ -45,6 +45,55 @@ export function WorldStudio() {
           />
         </label>
       ))}
+      <div className="form-section">Street grid editing</div>
+      <p className="panel-note">
+        Move an internal street row or column in metres. Parcels, entrance paths
+        and ground grading follow the street. Building locks preserve recipes,
+        not fixed world positions. Each block retains at least 32 m frontage.
+        Curves and arbitrary road drawing are planned.
+      </p>
+      {(["x", "z"] as const).flatMap((axis) =>
+        Array.from({ length: Math.max(0, p.world.blocks - 1) }, (_, index) => {
+          const id = String(index + 1);
+          return (
+            <label className="field" key={`${axis}-${id}`}>
+              {axis === "x" ? "North–south street" : "East–west street"} {id}{" "}
+              offset (m)
+              <input
+                type="number"
+                min={-8}
+                max={8}
+                step={0.5}
+                disabled={p.effects.viaduct}
+                value={p.world.roadOffsets?.[axis]?.[id] ?? 0}
+                onChange={(e) =>
+                  change({
+                    roadOffsets: {
+                      x: { ...p.world.roadOffsets?.x },
+                      z: { ...p.world.roadOffsets?.z },
+                      [axis]: {
+                        ...p.world.roadOffsets?.[axis],
+                        [id]: Number(e.target.value),
+                      },
+                    },
+                  })
+                }
+              />
+            </label>
+          );
+        }),
+      )}
+      <button
+        className="small-button full"
+        onClick={() => change({ roadOffsets: { x: {}, z: {} } })}
+      >
+        Reset street offsets
+      </button>
+      {p.effects.viaduct && (
+        <p className="panel-note">
+          Street offsets are disabled for the fixed viaduct preset.
+        </p>
+      )}
       <button
         className="small-button full"
         onClick={() => s.update({ seed: (p.seed + 104729) % 2147483647 })}

@@ -41,17 +41,31 @@ export interface CityPlan {
   extent: number;
   spacing: number;
 }
+export function cityAxes(p: Project): { x: number[]; z: number[] } {
+  const n = p.world.blocks,
+    spacing = p.world.blockSize + p.world.roadWidth + 2 * p.world.sidewalkWidth,
+    start = (-n * spacing) / 2;
+  const coordinates = (axis: "x" | "z") =>
+    Array.from(
+      { length: n + 1 },
+      (_, i) =>
+        start +
+        i * spacing +
+        (i > 0 && i < n ? (p.world.roadOffsets?.[axis]?.[String(i)] ?? 0) : 0),
+    );
+  return { x: coordinates("x"), z: coordinates("z") };
+}
 export function cityPlan(p: Project): CityPlan {
   const n = p.world.blocks,
     spacing = p.world.blockSize + p.world.roadWidth + 2 * p.world.sidewalkWidth,
-    start = (-n * spacing) / 2,
+    axes = cityAxes(p),
     nodes: RoadNode[] = [],
     edges: RoadEdge[] = [],
     plots: Plot[] = [];
   for (let z = 0; z <= n; z++)
     for (let x = 0; x <= n; x++) {
       const id = `junction-${x}-${z}`;
-      nodes.push({ id, x: start + x * spacing, z: start + z * spacing });
+      nodes.push({ id, x: axes.x[x], z: axes.z[z] });
       if (x < n)
         edges.push({
           id: `street-x-${x}-${z}`,
@@ -88,14 +102,22 @@ export function cityPlan(p: Project): CityPlan {
                   ? 2
                   : 1
                 : 1;
-        const px =
-            start +
-            (x + 0.5) * spacing +
-            (k % 2 ? 1 : -1) * p.world.blockSize * 0.25,
+        const frontageX =
+            axes.x[x + 1] -
+            axes.x[x] -
+            p.world.roadWidth -
+            2 * p.world.sidewalkWidth,
+          frontageZ =
+            axes.z[z + 1] -
+            axes.z[z] -
+            p.world.roadWidth -
+            2 * p.world.sidewalkWidth,
+          px =
+            (axes.x[x] + axes.x[x + 1]) / 2 +
+            (k % 2 ? 1 : -1) * frontageX * 0.25,
           pz =
-            start +
-            (z + 0.5) * spacing +
-            (k < 2 ? -1 : 1) * p.world.blockSize * 0.25,
+            (axes.z[z] + axes.z[z + 1]) / 2 +
+            (k < 2 ? -1 : 1) * frontageZ * 0.25,
           river = p.effects.creek && Math.abs(px - channelX(p, pz)) < 8.5;
         if (river && lock && !lock.park)
           throw new Error(
@@ -103,14 +125,8 @@ export function cityPlan(p: Project): CityPlan {
           );
         plots.push({
           id,
-          x:
-            start +
-            (x + 0.5) * spacing +
-            (k % 2 ? 1 : -1) * p.world.blockSize * 0.25,
-          z:
-            start +
-            (z + 0.5) * spacing +
-            (k < 2 ? -1 : 1) * p.world.blockSize * 0.25,
+          x: px,
+          z: pz,
           yaw: k < 2 ? Math.PI : 0,
           park:
             river ||
@@ -160,7 +176,8 @@ export function buildCity(
     parts: MeshData[] = [],
     road = p.world.roadWidth / 2,
     walk = p.world.sidewalkWidth,
-    viaduct = viaductPlan(p);
+    viaduct = viaductPlan(p),
+    axes = cityAxes(p);
   const add = (
     id: string,
     label: string,
@@ -204,7 +221,7 @@ export function buildCity(
     const a = node.get(e.from)!,
       b = node.get(e.to)!,
       alongX = a.z === b.z,
-      length = plan.spacing - 2 * road,
+      length = Math.hypot(b.x - a.x, b.z - a.z) - 2 * road,
       cx = (a.x + b.x) / 2,
       cz = (a.z + b.z) / 2;
     add(
@@ -295,6 +312,13 @@ export function buildCity(
     );
   }
   for (const plot of plan.plots) {
+    const [, blockX, blockZ, plotIndex] = /^block-(\d+)-(\d+)-plot-(\d+)$/.exec(
+        plot.id,
+      )!,
+      iz = Number(blockZ),
+      ix = Number(blockX),
+      frontageX = axes.x[ix + 1] - axes.x[ix] - 2 * road - 2 * walk,
+      frontageZ = axes.z[iz + 1] - axes.z[iz] - 2 * road - 2 * walk;
     if (plot.park) {
       const riparian =
         p.effects.creek && Math.abs(plot.x - channelX(p, plot.z)) < 8.5;
@@ -303,7 +327,7 @@ export function buildCity(
           `${plot.id}-park`,
           "Pocket park",
           [plot.x, -0.02, plot.z],
-          [p.world.blockSize * 0.42, 0.05, p.world.blockSize * 0.42],
+          [frontageX * 0.42, 0.05, frontageZ * 0.42],
           "grass",
           true,
           true,
@@ -411,8 +435,7 @@ export function buildCity(
             ? -recipe.depth / 6
             : recipe.depth / 2),
       streetZ =
-        plot.z +
-        direction * (plan.spacing / 2 - p.world.blockSize * 0.25 - road - walk);
+        axes.z[Number(plotIndex) < 2 ? iz : iz + 1] - direction * (road + walk);
     const length = Math.abs(streetZ - front);
     add(
       `${plot.id}-entrance-path`,

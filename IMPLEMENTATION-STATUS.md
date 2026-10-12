@@ -45,9 +45,15 @@ World Studio now saves per-block residential/commercial/mixed/park recipes, arch
 
 Whole-city sequence: (1) editable road graph and parcel connections with junction/grade diagnostics; (2) curved/irregular streets and district street palettes; (3) regional scheduling, map/detail separation, interior pinning and LOD/streaming; (4) benchmark larger multi-district fixtures and streamed export on measured budgets; (5) end-to-end city/browser/native acceptance. Current generation remains bounded to 3×3 blocks (36 plots), not a streaming whole city. Increasing that cap before scheduling and budgets is not a completed C6 implementation.
 
+## Editable street grid follow-up (C5 partial)
+
+Saved internal X/Z street-axis offsets now move complete rows/columns while preserving stable road/junction/plot IDs. Road spans use actual endpoint distances; parcel centers and park footprints derive from resolved block dimensions; entrance paths join resolved pavements; terrain grading queries the edited road locations. Offsets are bounded to ±8 m, resolved block frontage is at least 32 m, and inactive offsets survive grid resizing. Locked building recipes remain locked but their parcel positions follow road edits. The fixed three-block viaduct explicitly rejects shifted streets in project validation and generation; the editor disables offsets while it is enabled. World Studio exposes numeric offsets and reset.
+
+All 85 tests and production build pass. Regression evidence includes asymmetric edited streets, exact endpoint/span bounds, graded ground, a physical pavement-to-shop route, invalid frontage rejection, dormant offset recovery and the actual reconstructed RWX package bounds for road/junction/path pieces. Browser map interaction/GPU and native target joins remain uninspected. This is constrained orthogonal editing, not arbitrary node drawing, deletion, curves or irregular junction support. Concrete next city task: shared road-graph geometry and diagnostics for authored non-grid edges, then curves/parcel extraction; C6 streaming and measured whole-city budgets remain open.
+
 ## Verification
 
-- Automated suite: **82 tests passing** at this checkpoint; rerun on each geometry/schema/export/runtime change.
+- Automated suite: **85 tests passing** at this checkpoint; rerun on each geometry/schema/export/runtime change.
 - Strict TypeScript and Vite production build pass, including separate generation and export worker bundles. The editor bundle still triggers Vite's large-chunk warning; this is not a measured performance result.
 - Current 0.3 software geometry renders were inspected for five themes, a seeded neighborhood, a two-storey courtyard villa and a jungle creek/bridge/waterfall. Public scene evidence includes hashes and reproducible scripts. These are neither WebGL nor native screenshots; full human-scale visual acceptance remains open.
 - Browser/GPU inspection, resizing, pointer lock, IndexedDB, worker cancellation and long-session resource tests: **not performed**. The supported browser-control skill is unavailable in this managed environment; no replacement browser automation was improvised.

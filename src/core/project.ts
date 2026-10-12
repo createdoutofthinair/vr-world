@@ -28,6 +28,7 @@ export interface WorldSettings {
   parkRatio: number;
   viaductHeight: number;
   districts?: Record<string, DistrictRecipe>;
+  roadOffsets?: { x: Record<string, number>; z: Record<string, number> };
   locks: Record<
     string,
     {
@@ -1349,6 +1350,52 @@ export function validateProject(input: unknown): Project {
     throw new Error(
       "Viaduct approach exceeds the application grade budget of 12%.",
     );
+  const roadOffsets: NonNullable<WorldSettings["roadOffsets"]> = {
+    x: {},
+    z: {},
+  };
+  if (world.roadOffsets !== undefined) {
+    const input = world.roadOffsets;
+    if (!input || typeof input !== "object" || Array.isArray(input))
+      throw new Error("Invalid street offsets.");
+    for (const axis of ["x", "z"] as const) {
+      const values = input[axis];
+      if (
+        !values ||
+        typeof values !== "object" ||
+        Array.isArray(values) ||
+        Object.keys(values).length > 2
+      )
+        throw new Error("Invalid street offset axis.");
+      for (const [key, offset] of Object.entries(values)) {
+        if (
+          !/^[12]$/.test(key) ||
+          !Number.isFinite(offset) ||
+          Math.abs(offset) > 8
+        )
+          throw new Error("Invalid street offset.");
+        roadOffsets[axis][key] = offset;
+      }
+      for (let i = 0; i < blocks; i++) {
+        const left = i === 0 ? 0 : (roadOffsets[axis][String(i)] ?? 0),
+          right =
+            i + 1 === blocks ? 0 : (roadOffsets[axis][String(i + 1)] ?? 0);
+        if (world.blockSize + right - left < 32)
+          throw new Error(
+            "Street edits leave a block frontage below 32 metres.",
+          );
+      }
+    }
+    if (
+      effects.viaduct &&
+      Object.values(roadOffsets).some((axis) =>
+        Object.values(axis).some((v) => v !== 0),
+      )
+    )
+      throw new Error(
+        "The fixed viaduct preset does not support shifted streets. Reset street offsets first.",
+      );
+  }
   const districts: Record<string, DistrictRecipe> = {};
   const districtInput = world.districts === undefined ? {} : world.districts;
   if (
@@ -1525,6 +1572,7 @@ export function validateProject(input: unknown): Project {
       parkRatio: worldNumber("parkRatio", 0, 0.6),
       viaductHeight: worldNumber("viaductHeight", 2.5, 5),
       ...(Object.keys(districts).length ? { districts } : {}),
+      ...(world.roadOffsets !== undefined ? { roadOffsets } : {}),
       locks,
     },
     ...(["0.1.0", "0.2.0", "0.3.0", "0.4.0"].includes(p.migratedFrom as string)

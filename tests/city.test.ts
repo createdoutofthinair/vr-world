@@ -177,3 +177,85 @@ test("District recipes persist across validation and retain dormant blocks witho
     assert.throws(() => validateProject(invalid), /district/);
   }
 });
+
+test("Shifted street rows rebuild parcels, exact street spans, grading and physical entrance routes", async () => {
+  const { validateProject } = await import("../src/core/project");
+  const { terrainHeight } = await import("../src/core/terrain");
+  const p = preset("shop");
+  p.world.enabled = true;
+  p.world.blocks = 2;
+  p.world.parkRatio = 0;
+  p.landscape.density = 0;
+  p.terrain.form = "hills";
+  p.terrain.amplitude = 4;
+  p.world.roadOffsets = { x: { "1": 3 }, z: { "1": -2 } };
+  p.world.locks["block-0-0-plot-0"] = {
+    seed: 123,
+    archetype: "shop",
+    theme: "temperate",
+    storeys: 1,
+  };
+  const restored = validateProject(JSON.parse(JSON.stringify(p))),
+    plan = cityPlan(restored),
+    scene = buildScene(restored);
+  assert.deepEqual(restored.world.roadOffsets, p.world.roadOffsets);
+  assert.equal(plan.nodes.find((n) => n.id === "junction-1-1")!.x, 3);
+  assert.equal(plan.nodes.find((n) => n.id === "junction-1-1")!.z, -2);
+  for (const edge of plan.edges) {
+    const a = plan.nodes.find((n) => n.id === edge.from)!,
+      b = plan.nodes.find((n) => n.id === edge.to)!;
+    const road = scene.find((m) => m.id === edge.id)!,
+      box = bounds(road);
+    const alongX = a.z === b.z,
+      axis = alongX ? 0 : 2;
+    assert(
+      Math.abs(
+        box.min[axis] -
+          Math.min(alongX ? a.x : a.z, alongX ? b.x : b.z) -
+          p.world.roadWidth / 2,
+      ) < 1e-6,
+    );
+    assert(
+      Math.abs(
+        box.max[axis] -
+          Math.max(alongX ? a.x : a.z, alongX ? b.x : b.z) +
+          p.world.roadWidth / 2,
+      ) < 1e-6,
+    );
+    assert.equal(
+      terrainHeight(restored, (a.x + b.x) / 2, (a.z + b.z) / 2),
+      -0.02,
+    );
+  }
+  const plot = plan.plots[0],
+    street = -plan.spacing + p.world.roadWidth / 2 + 0.4;
+  let at: [number, number, number] = [plot.x, 1.695, street];
+  for (let i = 0; i < 300 && at[2] < plot.z - 3.5; i++)
+    at = moveWalker(at, [0, 0.1], scene);
+  assert(at[2] >= plot.z - 3.6, `Shifted entrance blocked ${at}`);
+  assert.equal(new Set(scene.map((m) => m.id)).size, scene.length);
+});
+
+test("Street edit validation rejects narrow parcels and unsupported shifted viaducts while retaining dormant offsets", async () => {
+  const { validateProject } = await import("../src/core/project");
+  const p = preset("house");
+  p.world.enabled = true;
+  p.world.blocks = 3;
+  p.world.roadOffsets = { x: { "1": 8 }, z: {} };
+  assert.throws(() => validateProject(p), /frontage/);
+  p.world.roadOffsets = { x: { "1": 2 }, z: { "2": -1 } };
+  p.effects.viaduct = true;
+  assert.throws(() => validateProject(p), /shifted streets/);
+  assert.throws(() => buildScene(p), /shifted streets/);
+  p.effects.viaduct = false;
+  p.world.blocks = 1;
+  const restored = validateProject(p);
+  assert.deepEqual(restored.world.roadOffsets, p.world.roadOffsets);
+  restored.world.blocks = 3;
+  assert(
+    Math.abs(
+      cityPlan(restored).nodes.find((n) => n.id === "junction-1-2")!.x -
+        (-cityPlan(restored).spacing / 2 + 2),
+    ) < 1e-10,
+  );
+});
