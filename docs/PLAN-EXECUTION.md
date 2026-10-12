@@ -58,3 +58,9 @@ The complete specification remains authoritative. Partial implementation and aut
 Substantial implementations now exist for M4/M6–M10, C0–C4, T1–T5 and E1–E6. All remain partial where their full acceptance includes unfinished controls, visual review or native proof. The table above records the starting state; current states and evidence live in `PLAN-COVERAGE.json`. The detailed implementation and remaining work are recorded in `../IMPLEMENTATION-STATUS.md`. Automated tests: 59 passing; production build passing. No browser/GPU/native acceptance is inferred.
 
 The subsequent checkpoint adds 20 plant families, locked individual plant recipes, per-plot template controls, scope/budget export controls, SVG geometry plans/inventory, portable deduplicated project ZIPs, archive/model validation, touch/fly navigation and view snapshots. Software renders are inspected separately from the still-pending GPU/native gates.
+
+## 0.4 room authoring checkpoint
+
+Rectangular authored room boundaries generate shared wall/door geometry, furnishing, connections, locked regeneration and selection metadata. Required room entry routes are checked against actual supporting floor pieces and collision. Tests cover five themes, real shared-wall traversal, lock preservation, overlaps/inaccessible layouts, v3 migration and selected-room archive reconstruction. Floor isolation remains an inspection view; walk mode uses the complete geometry. Automated suite: 65 passing. Polygonal planning, per-unit detachment and remaining city/environment/performance gates are still open.
+
+The native calibration download contains actual metre cubes/beam, XYZ landmark, one-sided checker plane, opacity and solid/visible probes, plus candidate placements/groups and recording instructions. It is separate from the editable scene and is explicitly unverified in the native client.

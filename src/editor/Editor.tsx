@@ -41,6 +41,7 @@ import { EffectStudio } from "./EffectStudio";
 import { KitStudio } from "./KitStudio";
 import { SignStudio } from "./SignStudio";
 import { PerformanceStudio } from "./PerformanceStudio";
+import { RoomStudio } from "./RoomStudio";
 import { HistoryStudio } from "./HistoryStudio";
 import { download } from "../core/package";
 const components = {
@@ -62,6 +63,7 @@ const components = {
   signs: SignStudio,
   performance: PerformanceStudio,
   history: HistoryStudio,
+  rooms: RoomStudio,
 };
 const panelNames: Record<string, string> = {
   explorer: "Explorer",
@@ -82,6 +84,7 @@ const panelNames: Record<string, string> = {
   signs: "Signs & artwork",
   performance: "Performance & proof gates",
   history: "Versions & recovery",
+  rooms: "Rooms & boundaries",
 };
 function defaultLayout(api: DockviewApi) {
   api.clear();
@@ -160,6 +163,7 @@ function defaultLayout(api: DockviewApi) {
     "signs",
     "performance",
     "history",
+    "rooms",
   ])
     api.addPanel({
       id,

@@ -1,5 +1,6 @@
 import { MeshData, Project, Vec3 } from "./project";
 import { box, beam } from "./mesh";
+import { authoredRoomTopology } from "./rooms";
 import { footprintCells } from "./footprints";
 
 export interface Room {
@@ -79,7 +80,7 @@ function extents(m: MeshData) {
     }
   return { min, max };
 }
-function door(
+export function buildingDoor(
   id: string,
   x: number,
   y: number,
@@ -127,6 +128,7 @@ export function buildingTopology(p: Project): {
   rooms: Room[];
   connections: Connection[];
 } {
+  if (p.rooms.length && !p.world.enabled) return authoredRoomTopology(p);
   if (p.structure.footprint !== "rectangle") {
     const cells = footprintCells(p),
       rooms: Room[] = [
@@ -270,9 +272,9 @@ export function buildBuilding(
 ): MeshData[] {
   const levels = p.structure.storeys;
   if (levels === 1 && p.archetype !== "flats" && p.archetype !== "mixed") {
-    const result = single(p);
+    const result = single(p.rooms.length ? { ...p, furnished: false } : p);
     result.push(
-      door(
+      buildingDoor(
         "entry-door",
         0,
         floorElevation(p, 0),
@@ -282,7 +284,7 @@ export function buildBuilding(
         p.structure.doorAngle,
       ),
     );
-    if (p.archetype === "shop") {
+    if (p.archetype === "shop" && !p.rooms.length) {
       const y = floorElevation(p, 0),
         z = -p.depth * 0.15,
         span = (p.width - 2 * p.wallThickness - 1.2) / 2;
@@ -304,7 +306,15 @@ export function buildBuilding(
           [1.2, p.height - 2.25, 0.12],
           "wall",
         ),
-        door("stockroom-door", 0, y, z, 1.1, 2.2, p.structure.doorAngle),
+        buildingDoor(
+          "stockroom-door",
+          0,
+          y,
+          z,
+          1.1,
+          2.2,
+          p.structure.doorAngle,
+        ),
       );
     }
     return applyDoorPoses(p, result);
@@ -317,7 +327,10 @@ export function buildBuilding(
         ...p,
         roof: top ? p.roof : "none",
         architectureDetails: level === 0 && p.architectureDetails,
-        furnished: p.furnished && p.structure.interior === "furnished",
+        furnished:
+          !p.rooms.length &&
+          p.furnished &&
+          p.structure.interior === "furnished",
         archetype:
           p.archetype === "mixed"
             ? level === 0
@@ -435,7 +448,7 @@ export function buildBuilding(
         front.level = level;
         parts.push(front);
       } else {
-        const balconyDoor = door(
+        const balconyDoor = buildingDoor(
           `balcony-door-${level}`,
           0,
           elevation,
@@ -448,64 +461,66 @@ export function buildBuilding(
         parts.push(balconyDoor);
       }
     }
-    if (p.archetype === "flats" || (p.archetype === "mixed" && level > 0)) {
-      parts.push(...apartmentInteriors(p, level, stair));
-    } else {
-      // One authoritative partition with a doorway; it stops short of the shared stair core.
-      const partitionEnd = stair.x0 - 0.2,
-        partitionZ = -p.depth * 0.12,
-        passage = Math.min(1.2, p.doorWidth),
-        doorCenter =
-          p.archetype === "mixed" && level === 0 ? -p.width * 0.22 : 0;
-      const leftWidth =
-        p.width / 2 - p.wallThickness + doorCenter - passage / 2;
-      parts.push(
-        box(
-          `level-${level}-room-wall-left`,
-          "Room partition",
-          [
-            (-p.width / 2 + p.wallThickness + doorCenter - passage / 2) / 2,
-            elevation,
-            partitionZ,
-          ],
-          [leftWidth, p.height, 0.12],
-          "wall",
-        ),
-      );
-      if (partitionEnd > doorCenter + passage / 2)
+    if (!p.rooms.length) {
+      if (p.archetype === "flats" || (p.archetype === "mixed" && level > 0)) {
+        parts.push(...apartmentInteriors(p, level, stair));
+      } else {
+        // One authoritative partition with a doorway; it stops short of the shared stair core.
+        const partitionEnd = stair.x0 - 0.2,
+          partitionZ = -p.depth * 0.12,
+          passage = Math.min(1.2, p.doorWidth),
+          doorCenter =
+            p.archetype === "mixed" && level === 0 ? -p.width * 0.22 : 0;
+        const leftWidth =
+          p.width / 2 - p.wallThickness + doorCenter - passage / 2;
         parts.push(
           box(
-            `level-${level}-room-wall-right`,
+            `level-${level}-room-wall-left`,
             "Room partition",
             [
-              (partitionEnd + doorCenter + passage / 2) / 2,
+              (-p.width / 2 + p.wallThickness + doorCenter - passage / 2) / 2,
               elevation,
               partitionZ,
             ],
-            [partitionEnd - doorCenter - passage / 2, p.height, 0.12],
+            [leftWidth, p.height, 0.12],
             "wall",
           ),
         );
-      parts.push(
-        box(
-          `level-${level}-room-head`,
-          "Room doorway head",
-          [doorCenter, elevation + 2.25, partitionZ],
-          [passage, p.height - 2.25, 0.12],
-          "wall",
-        ),
-      );
-      const leaf = door(
-        `level-${level}-room-door`,
-        doorCenter,
-        elevation,
-        partitionZ,
-        passage - 0.1,
-        2.2,
-        p.structure.doorAngle,
-      );
-      leaf.level = level;
-      parts.push(leaf);
+        if (partitionEnd > doorCenter + passage / 2)
+          parts.push(
+            box(
+              `level-${level}-room-wall-right`,
+              "Room partition",
+              [
+                (partitionEnd + doorCenter + passage / 2) / 2,
+                elevation,
+                partitionZ,
+              ],
+              [partitionEnd - doorCenter - passage / 2, p.height, 0.12],
+              "wall",
+            ),
+          );
+        parts.push(
+          box(
+            `level-${level}-room-head`,
+            "Room doorway head",
+            [doorCenter, elevation + 2.25, partitionZ],
+            [passage, p.height - 2.25, 0.12],
+            "wall",
+          ),
+        );
+        const leaf = buildingDoor(
+          `level-${level}-room-door`,
+          doorCenter,
+          elevation,
+          partitionZ,
+          passage - 0.1,
+          2.2,
+          p.structure.doorAngle,
+        );
+        leaf.level = level;
+        parts.push(leaf);
+      }
     }
     if (!top) {
       const step = (
@@ -667,7 +682,7 @@ export function buildBuilding(
     }
   }
   parts.push(
-    door(
+    buildingDoor(
       "entry-door",
       0,
       floorElevation(p, 0),
@@ -682,7 +697,7 @@ export function buildBuilding(
     if (center >= 0) parts.splice(center, 1);
     for (const side of [-1, 1])
       parts.push(
-        door(
+        buildingDoor(
           side < 0 ? "commercial-entry-door" : "residential-entry-door",
           side * p.width * 0.22,
           floorElevation(p, 0),
@@ -773,7 +788,7 @@ function apartmentInteriors(
       "wall",
       y + 2.25,
     );
-    const leaf = door(
+    const leaf = buildingDoor(
       `level-${level}-unit-${side}-door`,
       0,
       y,
@@ -825,7 +840,7 @@ function apartmentInteriors(
       "wall",
       y + 2.25,
     );
-    const leaf = door(
+    const leaf = buildingDoor(
       `level-${level}-unit-${side}-bedroom-door`,
       x,
       y,
@@ -864,7 +879,7 @@ function apartmentInteriors(
       "wall",
       y + 2.15,
     );
-    const leaf = door(
+    const leaf = buildingDoor(
       `level-${level}-unit-${id}-bathroom-door`,
       bx,
       y,

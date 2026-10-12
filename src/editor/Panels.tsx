@@ -1,3 +1,4 @@
+import { createCalibrationKit } from "../core/calibration";
 import { ChangeEvent, useState } from "react";
 import {
   Box,
@@ -149,7 +150,7 @@ export function Properties() {
   return (
     <div className="panel-pad properties">
       <div className="panel-eyebrow">
-        BUILDING RECIPE <span>v0.3</span>
+        BUILDING RECIPE <span>v0.4</span>
       </div>
       <label className="field">
         Project name
@@ -340,6 +341,10 @@ export function Presets() {
           <ArrowUpRight size={16} />
         </button>
       ))}
+      <p className="panel-note">
+        Kennedy House is reference-pending. Its layout will be added when a
+        specific plan, image or existing model is available.
+      </p>
       <div className="form-section">World theme</div>
       <div className="theme-picker">
         {Object.entries(THEMES).map(([id, t]) => (
@@ -582,7 +587,7 @@ export function Materials() {
 export function FloorPlan() {
   const s = useStudio(),
     [activeLevel, setActiveLevel] = useState(0),
-    p = s.project,
+    p = s.renderProject,
     levels = p.world.enabled
       ? Math.max(1, ...s.meshes.map((m) => (m.level ?? 0) + 1))
       : p.structure.storeys,
@@ -622,6 +627,16 @@ export function FloorPlan() {
           </option>
         ))}
       </select>
+      <button
+        className="small-button full"
+        onClick={() => {
+          s.setInspectionLevel(Math.min(activeLevel, levels - 1));
+          s.setCutaway(true);
+          s.setMode("orbit");
+        }}
+      >
+        Inspect this floor in 3D
+      </button>
       <svg
         viewBox={`${-w / 2} ${-d / 2} ${w} ${d}`}
         aria-label="Generated floor plan with true openings"
@@ -664,6 +679,35 @@ export function FloorPlan() {
               </rect>
             );
           })}
+        {!p.world.enabled &&
+          p.rooms
+            .filter((room) => room.level === Math.min(activeLevel, levels - 1))
+            .map((room) => (
+              <g
+                key={room.id}
+                onClick={() => s.select(room.id)}
+                style={{ cursor: "pointer" }}
+              >
+                <rect
+                  x={room.x - room.width / 2}
+                  y={-room.z - room.depth / 2}
+                  width={room.width}
+                  height={room.depth}
+                  fill={s.selected === room.id ? "#add89933" : "transparent"}
+                  stroke={s.selected === room.id ? "#397c3a" : "none"}
+                  strokeWidth={0.05}
+                />
+                <text
+                  x={room.x}
+                  y={-room.z}
+                  textAnchor="middle"
+                  fontSize={0.22}
+                  fill="#365143"
+                >
+                  {room.name}
+                </text>
+              </g>
+            ))}
         <text
           x={0}
           y={-p.depth / 2 - 0.6}
@@ -749,7 +793,7 @@ export function ExportPanel() {
           <option value="all">Entire generated scene</option>
           <option value="building">Building structures and interiors</option>
           <option value="environment">Site and environment</option>
-          <option value="selected">Selected mesh object</option>
+          <option value="selected">Selected mesh or authored room</option>
         </select>
       </label>
       <details>
@@ -870,6 +914,26 @@ export function ExportPanel() {
           </details>
         </>
       )}
+      <button
+        className="small-button full"
+        onClick={async () => {
+          try {
+            const bytes = await createCalibrationKit();
+            download(
+              "c3-native-calibration.zip",
+              Uint8Array.from(bytes).buffer,
+              "application/zip",
+            );
+            s.notify(
+              "Native calibration kit saved. Its import profiles remain provisional until measured in the VP client.",
+            );
+          } catch (error) {
+            s.notify((error as Error).message);
+          }
+        }}
+      >
+        Download native scale / winding / texture probes
+      </button>
       <div className="form-section">Portable project</div>
       <button
         className="small-button full"

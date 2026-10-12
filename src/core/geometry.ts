@@ -7,6 +7,7 @@ import { bakeTerrain } from "./terrain";
 import { buildMassing } from "./massing";
 import { buildEffects } from "./effects";
 import { buildModules } from "./modules";
+import { buildRooms, validateRoomAccess } from "./rooms";
 import { buildLandmarks } from "./landmarks";
 import { buildSigns } from "./signs";
 export interface Bounds {
@@ -30,10 +31,12 @@ export function buildScene(p: Project, bake = true): MeshData[] {
       : p.kit.buildingEnabled
         ? buildMassing(p, source)
         : buildLandscape(p)),
+    ...(p.world.enabled ? [] : buildRooms(p)),
     ...buildModules(p),
     ...(p.world.enabled ? [] : buildSigns(p)),
     ...buildEffects(p),
   ];
+  validateRoomAccess(p, parts);
   parts.push(...buildLandmarks(p, parts));
   return bake ? bakeTerrain(p, parts) : parts;
 }

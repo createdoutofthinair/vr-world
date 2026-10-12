@@ -328,7 +328,7 @@ export function buildMassing(p: Project, reference: MeshData[]): MeshData[] {
     leaf.positions[i + 2] = x * Math.sin(theta) + z * Math.cos(theta);
   }
   parts.push(leaf);
-  if (p.furnished && p.structure.interior === "furnished")
+  if (!p.rooms.length && p.furnished && p.structure.interior === "furnished")
     for (const [i, c] of cells.entries()) {
       if (c.x === 2 && p.structure.storeys > 1) continue;
       if (c.x === 0 && p.structure.footprint === "l" && p.structure.storeys > 1)

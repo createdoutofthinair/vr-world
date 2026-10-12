@@ -139,3 +139,24 @@ test("Package reconstruction rejects changed model bytes and unsafe or duplicate
     /duplicate placement/,
   );
 });
+test("Selected authored room exports shared walls, its props and the existing supporting slab", async () => {
+  const p = fixture();
+  p.width = 10;
+  p.depth = 10;
+  p.landscape.density = 0;
+  const { regenerateRooms } = await import("../src/core/rooms");
+  p.rooms = regenerateRooms(p);
+  const selected = p.rooms.find((r) => r.type === "bedroom")!;
+  const b = await createPackage(p, {
+    scope: "selected",
+    selected: [selected.id],
+  });
+  assert(b.meshes.some((m) => m.id.includes("mattress")));
+  assert(b.meshes.some((m) => m.walkable));
+  assert(b.meshes.every((m) => m.walkable || m.roomIds?.includes(selected.id)));
+  assert(
+    !b.meshes.some((m) =>
+      m.roomIds?.includes(p.rooms.find((r) => r.type === "bathroom")!.id),
+    ),
+  );
+});

@@ -1680,6 +1680,9 @@ h3 {
   touch-action: none;
 }
 .viewport-toolbar {
+  flex-wrap: wrap;
+  max-height: 40%;
+  overflow: auto;
   position: absolute;
   top: 12px;
   left: 12px;

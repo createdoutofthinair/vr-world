@@ -5,7 +5,7 @@ A public website and browser-based modular building workshop, hosted together on
 - [Website](https://createdoutofthinair.github.io/vr-world/)
 - [Editor](https://createdoutofthinair.github.io/vr-world/#editor)
 
-Release **0.3.0** advances the complete plan with multi-storey buildings, linked modules, seeded cities, terrain authoring, plant growth controls and waterways. See [implementation status](IMPLEMENTATION-STATUS.md) for exact scope and deployment evidence.
+Release **0.4.0** advances the complete plan with multi-storey buildings, linked modules, seeded cities, terrain authoring, plant growth controls, waterways and editable interior room boundaries. See [implementation status](IMPLEMENTATION-STATUS.md) for exact scope and deployment evidence.
 
 ## World scene release
 
@@ -15,6 +15,7 @@ The editor includes:
 
 - Dockview panes: Explorer, Properties, Presets, Materials, Floor Plan, Export, Problems, Themes & Landscape, Plant Studio, and 3D workspace.
 - Shop, house, villa, flats and mixed-use templates, up to six storeys, straight/U stairs with true slab voids, unit interiors, and connected L/U/courtyard wings.
+- Authored rectangular rooms with shared walls, doorway connections, room-specific furnishing/finishes, locks, physical access diagnostics, floor isolation and linked plan selection.
 - Generated wall thickness, true door/window openings, frames, glass, floor, ceiling, flat/gable roofs, supported furniture, bedroom partitions with open passages, and shop signage.
 - Orbit, fly inspection, touch navigation, roof cutaway, linked selection, and pointer-lock walking with collision, sampled mesh terrain, and bounded stair risers.
 - Five architectural kits and five independent biomes. Jungle verandas and canopy plants, desert shade structures and arid flora, timber fantasy buildings and woodland, modular sci-fi frames and alien fans, temperate shops and parkland.
@@ -25,7 +26,7 @@ The editor includes:
 - A ZIP export containing `c3-` RWX models, PNG textures, canonical placements, the project, provenance, installation notes, and a validation report.
 - Export Preview rebuilt from actual generated ZIP files with RWX parsing, texture hashes and a VP move runtime. Bounded rebased groups include experimental AWG3 ZIPs and VPPTSV placement probes. Package builds run in a cancellable worker with progress, selectable scopes and group budgets. Packages include per-level SVG geometry plans and a placement inventory.
 
-The native VP profile is **provisional**. The browser round trip does not certify native rendering, scale, winding, transparency, or collision. Experimental AWG syntax is implemented, but its native units/import are unverified. Rotation is an explicit candidate adapter disabled by default. Free room layouts, per-unit overrides, curved streets/districts, viaduct authoring, custom plant recipes/biome masks, streaming/LOD, GLB and rich annotated plans, and complete release acceptance remain pending. The full plan is not complete.
+The native VP profile is **provisional**. The browser round trip does not certify native rendering, scale, winding, transparency, or collision. Experimental AWG syntax is implemented, but its native units/import are unverified. Rotation is an explicit candidate adapter disabled by default. General polygonal room layouts and per-unit overrides, curved streets/districts, viaduct authoring, custom plant recipes/biome masks, streaming/LOD, GLB and rich annotated plans, and complete release acceptance remain pending. The full plan is not complete.
 
 ## Development
 

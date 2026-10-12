@@ -31,14 +31,14 @@
       "title": "House, stairs, and reliable walkthrough",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "tests/circulation.test.ts; upper-floor and room routes; browser walkthrough pending"
+      "evidence": "tests/circulation.test.ts and tests/rooms.test.ts; upper-floor/stair/room routes and authored boundaries; browser walkthrough pending"
     },
     {
       "id": "M5",
       "title": "Materials and export hardening",
       "state": "partial",
       "externalProofPending": true,
-      "evidence": "tests/package.test.ts; selected scopes, strict group budgets, model/texture hashes, SVG plans and CSV inventory; native profile unverified"
+      "evidence": "tests/package.test.ts; selected scopes, strict group budgets, model/texture hashes, SVG plans and CSV inventory; native profile unverified; selected authored-room package reconstruction includes associated pieces and supporting slab"
     },
     {
       "id": "M6",
@@ -66,7 +66,7 @@
       "title": "Complete retail and interior authoring",
       "state": "partial",
       "externalProofPending": false,
-      "evidence": "src/editor/SignStudio.tsx; retail rooms and sign authoring; free layouts pending"
+      "evidence": "tests/rooms.test.ts; shared wall ownership, five-theme furnished layouts, physical routes, locks and conflict diagnostics; sign authoring; per-face finishes and polygonal room editing pending"
     },
     {
       "id": "M10",
@@ -1016,6 +1016,6 @@
       "state": "unverified"
     }
   ],
-  "checkpoint": "0.3.0",
+  "checkpoint": "0.4.0",
   "updated": "2026-10-12"
 }

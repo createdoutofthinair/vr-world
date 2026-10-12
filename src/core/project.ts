@@ -171,6 +171,29 @@ export const PLANT_FAMILIES = [
   "stump",
 ] as const;
 export type PlantFamilyName = (typeof PLANT_FAMILIES)[number];
+export interface AuthoredRoom {
+  id: string;
+  name: string;
+  type:
+    | "bedroom"
+    | "bathroom"
+    | "kitchen"
+    | "living"
+    | "shop"
+    | "storage"
+    | "corridor";
+  level: number;
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+  doorSide: "front" | "back" | "left" | "right";
+  doorOffset: number;
+  doorWidth: number;
+  locked: boolean;
+  furnished: boolean;
+  finish: MaterialRole;
+}
 export interface PlantLandmark {
   id: string;
   family: PlantFamilyName;
@@ -465,9 +488,9 @@ export interface SignSlot {
   };
 }
 export interface Project {
-  schemaVersion: 3;
-  generatorVersion: "0.3.0";
-  migratedFrom?: "0.1.0" | "0.2.0";
+  schemaVersion: 4;
+  generatorVersion: "0.4.0";
+  migratedFrom?: "0.1.0" | "0.2.0" | "0.3.0";
   structure: StructureSettings;
   world: WorldSettings;
   terrain: TerrainSettings;
@@ -478,6 +501,7 @@ export interface Project {
   signs: SignSlot[];
   plants: PlantSettings;
   plantLandmarks: PlantLandmark[];
+  rooms: AuthoredRoom[];
   biome: Biome;
   landscape: LandscapeSettings;
   architectureDetails: boolean;
@@ -532,6 +556,7 @@ export interface MeshData {
   walkable?: boolean;
   level?: number;
   doorId?: string;
+  roomIds?: string[];
   materialColor?: string;
   action?: string;
   textureRef?: string;
@@ -546,8 +571,8 @@ export interface MeshData {
   solid: boolean;
 }
 export const DEFAULT_PROJECT: Project = {
-  schemaVersion: 3,
-  generatorVersion: "0.3.0",
+  schemaVersion: 4,
+  generatorVersion: "0.4.0",
   structure: { ...DEFAULT_STRUCTURE },
   world: { ...DEFAULT_WORLD, locks: {} },
   terrain: { ...DEFAULT_TERRAIN, edits: [] },
@@ -558,6 +583,7 @@ export const DEFAULT_PROJECT: Project = {
   signs: [],
   plants: { ...DEFAULT_PLANTS, pruned: [] },
   plantLandmarks: [],
+  rooms: [],
   biome: "temperate",
   landscape: { ...DEFAULT_LANDSCAPE },
   architectureDetails: true,
@@ -766,8 +792,8 @@ export function validateProject(input: unknown): Project {
   if (p.schemaVersion === 1 && p.generatorVersion === "0.1.0") {
     p = {
       ...p,
-      schemaVersion: 3,
-      generatorVersion: "0.3.0",
+      schemaVersion: 4,
+      generatorVersion: "0.4.0",
       structure: { ...DEFAULT_STRUCTURE },
       world: { ...DEFAULT_WORLD, locks: {} },
       terrain: { ...DEFAULT_TERRAIN, edits: [] },
@@ -778,6 +804,7 @@ export function validateProject(input: unknown): Project {
       signs: [],
       plants: { ...DEFAULT_PLANTS, pruned: [] },
       plantLandmarks: [],
+      rooms: [],
       migratedFrom: "0.1.0",
       biome: DEFAULT_BIOME[p.theme as Theme],
       landscape: { ...DEFAULT_LANDSCAPE },
@@ -788,8 +815,8 @@ export function validateProject(input: unknown): Project {
   if (p.schemaVersion === 2 && p.generatorVersion === "0.2.0")
     p = {
       ...p,
-      schemaVersion: 3,
-      generatorVersion: "0.3.0",
+      schemaVersion: 4,
+      generatorVersion: "0.4.0",
       migratedFrom: "0.2.0",
       structure: { ...DEFAULT_STRUCTURE },
       world: { ...DEFAULT_WORLD, locks: {} },
@@ -801,8 +828,18 @@ export function validateProject(input: unknown): Project {
       signs: [],
       plants: { ...DEFAULT_PLANTS, pruned: [] },
       plantLandmarks: [],
+      rooms: [],
     };
-  if (p.schemaVersion !== 3 || p.generatorVersion !== "0.3.0")
+  if (p.schemaVersion === 3 && p.generatorVersion === "0.3.0")
+    p = {
+      ...p,
+      schemaVersion: 4,
+      generatorVersion: "0.4.0",
+      migratedFrom: "0.3.0",
+      rooms: p.rooms ?? [],
+      plantLandmarks: p.plantLandmarks ?? [],
+    };
+  if (p.schemaVersion !== 4 || p.generatorVersion !== "0.4.0")
     throw new Error("Unsupported project/generator version.");
   const number = (key: string, lo: number, hi: number) => {
     const n = p[key];
@@ -1079,6 +1116,55 @@ export function validateProject(input: unknown): Project {
       };
     },
   );
+  const rawRooms = p.rooms ?? [];
+  if (!Array.isArray(rawRooms) || rawRooms.length > 60)
+    throw new Error("Too many authored rooms.");
+  const roomIds = new Set<string>();
+  const rooms: AuthoredRoom[] = rawRooms.map((room: AuthoredRoom) => {
+    if (
+      !room ||
+      typeof room.id !== "string" ||
+      !/^room-[a-z0-9-]+$/.test(room.id) ||
+      roomIds.has(room.id) ||
+      typeof room.name !== "string" ||
+      room.name.length > 80 ||
+      ![
+        "bedroom",
+        "bathroom",
+        "kitchen",
+        "living",
+        "shop",
+        "storage",
+        "corridor",
+      ].includes(room.type) ||
+      !Number.isInteger(room.level) ||
+      room.level < 0 ||
+      room.level > 5 ||
+      ![
+        room.x,
+        room.z,
+        room.width,
+        room.depth,
+        room.doorOffset,
+        room.doorWidth,
+      ].every(Number.isFinite) ||
+      Math.abs(room.x) > 20 ||
+      Math.abs(room.z) > 20 ||
+      room.width < 2 ||
+      room.depth < 2 ||
+      room.width > 20 ||
+      room.depth > 20 ||
+      room.doorWidth < 0.9 ||
+      room.doorWidth > 2 ||
+      !["front", "back", "left", "right"].includes(room.doorSide) ||
+      typeof room.locked !== "boolean" ||
+      typeof room.furnished !== "boolean" ||
+      !MATERIAL_ROLES.includes(room.finish)
+    )
+      throw new Error("Invalid or duplicate authored room.");
+    roomIds.add(room.id);
+    return { ...room };
+  });
   const kit = p.kit as KitSettings;
   if (
     !kit ||
@@ -1338,14 +1424,15 @@ export function validateProject(input: unknown): Project {
     doorPoses[id] = angle;
   }
   return {
-    schemaVersion: 3,
-    generatorVersion: "0.3.0",
+    schemaVersion: 4,
+    generatorVersion: "0.4.0",
     kit: { buildingEnabled: kit.buildingEnabled, definitions, instances },
     materialOptions,
     materialMaps,
     signs,
     plants: { ...plants, pruned: [...new Set(plants.pruned)] },
     plantLandmarks,
+    rooms,
     terrain: {
       form: terrain.form,
       geology: terrain.geology,
@@ -1372,7 +1459,7 @@ export function validateProject(input: unknown): Project {
       parkRatio: worldNumber("parkRatio", 0, 0.6),
       locks,
     },
-    ...(["0.1.0", "0.2.0"].includes(p.migratedFrom as string)
+    ...(["0.1.0", "0.2.0", "0.3.0"].includes(p.migratedFrom as string)
       ? { migratedFrom: p.migratedFrom as Project["migratedFrom"] }
       : {}),
     structure: {
@@ -1445,6 +1532,7 @@ export function preset(
     signs: [],
     plants: { ...DEFAULT_PLANTS, pruned: [] },
     plantLandmarks: [],
+    rooms: [],
     terrain: { ...DEFAULT_TERRAIN, edits: [] },
     effects: { ...DEFAULT_EFFECTS },
     world: { ...DEFAULT_WORLD, locks: {} },

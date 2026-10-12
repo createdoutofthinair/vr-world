@@ -22,6 +22,7 @@ import { moveWalker, bounds, findWalkSpawn } from "../core/geometry";
 import { textureImage } from "../core/textures";
 import { useStudio, clockSeconds } from "./store";
 import { ActionRuntime } from "../core/actions";
+import { floorElevation } from "../core/building";
 import { publishPerformance } from "../core/performance";
 
 function disposeGroup(group: THREE.Group) {
@@ -72,6 +73,16 @@ export function Viewport() {
     [showGrid, setShowGrid] = useState(false),
     [coords, setCoords] = useState("0.0, 0.0, 0.0"),
     [contextRevision, setContextRevision] = useState(0);
+  const inspectionFloor =
+    s.inspectionLevel === null
+      ? null
+      : Math.min(
+          s.inspectionLevel,
+          Math.max(
+            s.renderProject.structure.storeys,
+            ...s.meshes.map((mesh) => (mesh.level ?? 0) + 1),
+          ) - 1,
+        );
   current.current = s;
   touchActive.current = touch;
   useEffect(() => {
@@ -473,6 +484,14 @@ export function Viewport() {
     rt.bindings = new Map();
     for (const part of meshes) {
       if (part.category === "roof" && s.cutaway) continue;
+      if (
+        s.mode !== "walk" &&
+        s.cutaway &&
+        inspectionFloor !== null &&
+        ["structure", "windows", "interior"].includes(part.category) &&
+        (part.level ?? 0) !== inspectionFloor
+      )
+        continue;
       const spec = specs[part.material];
       const materialKey =
         part.material +
@@ -608,6 +627,8 @@ export function Viewport() {
     s.bundle,
     s.view,
     s.cutaway,
+    s.inspectionLevel,
+    s.mode,
     s.project,
     contextRevision,
     s.assetRevision,
@@ -627,8 +648,23 @@ export function Viewport() {
     const part = (
       s.view === "export" && s.bundle ? s.bundle.meshes : s.meshes
     ).find((m) => m.id === s.selected);
-    if (part) {
-      const b = bounds(part),
+    const room = s.renderProject.rooms.find((room) => room.id === s.selected);
+    if (part || room) {
+      const b = part
+          ? bounds(part)
+          : {
+              min: [
+                room!.x - room!.width / 2,
+                floorElevation(s.renderProject, room!.level),
+                room!.z - room!.depth / 2,
+              ] as Vec3,
+              max: [
+                room!.x + room!.width / 2,
+                floorElevation(s.renderProject, room!.level) +
+                  s.renderProject.height,
+                room!.z + room!.depth / 2,
+              ] as Vec3,
+            },
         line = new THREE.Box3Helper(
           new THREE.Box3(
             new THREE.Vector3(...b.min),
@@ -641,7 +677,7 @@ export function Viewport() {
       line.userData.selectionOutline = true;
       rt.group.add(line);
     }
-  }, [s.selected, s.meshes, s.cutaway, s.view, s.bundle]);
+  }, [s.selected, s.meshes, s.cutaway, s.view, s.bundle, s.renderProject]);
   useEffect(() => {
     const rt = runtime.current;
     if (!rt) return;
@@ -768,6 +804,32 @@ export function Viewport() {
         >
           <Layers3 size={15} /> Cutaway
         </button>
+        {s.cutaway && (
+          <select
+            aria-label="Isolate floor for orbit or fly inspection"
+            value={inspectionFloor ?? -1}
+            onChange={(e) =>
+              s.setInspectionLevel(
+                Number(e.target.value) < 0 ? null : Number(e.target.value),
+              )
+            }
+          >
+            <option value={-1}>All floors</option>
+            {Array.from(
+              {
+                length: Math.max(
+                  s.renderProject.structure.storeys,
+                  ...s.meshes.map((m) => (m.level ?? 0) + 1),
+                ),
+              },
+              (_, level) => (
+                <option key={level} value={level}>
+                  Inspect floor {level + 1}
+                </option>
+              ),
+            )}
+          </select>
+        )}
         <button
           className="tool"
           onClick={() => {

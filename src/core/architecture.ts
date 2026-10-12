@@ -529,7 +529,13 @@ export function decorateBuilding(p: Project, source: MeshData[]): MeshData[] {
       );
   }
   // Real partition with an open 1.2 m passage; furnishing is split into living/sleeping zones.
-  if (p.archetype !== "shop" && p.archetype !== "mixed" && w >= 7 && d >= 7) {
+  if (
+    !p.rooms.length &&
+    p.archetype !== "shop" &&
+    p.archetype !== "mixed" &&
+    w >= 7 &&
+    d >= 7
+  ) {
     const span = (w - 2 * p.wallThickness - 1.2) / 2,
       z = -d * 0.12;
     for (const side of [-1, 1])

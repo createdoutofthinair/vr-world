@@ -52,6 +52,8 @@ interface StudioStore {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  inspectionLevel: number | null;
+  setInspectionLevel: (level: number | null) => void;
   cutaway: boolean;
   setCutaway: (v: boolean) => void;
   mode: "orbit" | "walk" | "fly";
@@ -97,6 +99,7 @@ function initial(): Project {
   let p = structuredClone(DEFAULT_PROJECT);
   try {
     const s =
+      localStorage.getItem("c3-project-v4") ??
       localStorage.getItem("c3-project-v3") ??
       localStorage.getItem("c3-project-v2") ??
       localStorage.getItem("c3-project-v1");
@@ -126,6 +129,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     })),
     [selected, select] = useState<string | null>(null),
     [cutaway, setCutaway] = useState(false),
+    [inspectionLevel, setInspectionLevel] = useState<number | null>(null),
     [mode, setMode] = useState<"orbit" | "walk" | "fly">("orbit"),
     [view, setView] = useState<"authoring" | "export">("authoring"),
     [bundle, setBundle] = useState<ExportBundle | null>(null),
@@ -530,6 +534,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         redo,
         canUndo: !!history.past.length,
         canRedo: !!history.future.length,
+        inspectionLevel,
+        setInspectionLevel,
         cutaway,
         setCutaway,
         mode,

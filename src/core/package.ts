@@ -8,7 +8,8 @@ import {
   Project,
   validateProject,
 } from "./project";
-import { buildScene } from "./geometry";
+import { floorElevation } from "./building";
+import { buildScene, bounds } from "./geometry";
 import {
   dependencyRoles,
   evaluateCreationAction,
@@ -41,6 +42,7 @@ interface Placement {
   walkable?: boolean;
   level?: number;
   doorId?: string;
+  roomIds?: string[];
   surfaceMesh?: boolean;
   action: string;
 }
@@ -117,6 +119,29 @@ export async function createPackage(
     selected = new Set(options.selected ?? []);
   if (!["all", "building", "environment", "selected"].includes(scope))
     throw new Error("Unknown export scope.");
+  const selectedRooms = project.world.enabled
+    ? []
+    : project.rooms.filter((room) => selected.has(room.id));
+  const belongsToSelection = (mesh: MeshData) =>
+    selected.has(mesh.id) ||
+    selectedRooms.some((room) => {
+      if (mesh.roomIds?.includes(room.id)) return true;
+      if (
+        !mesh.walkable ||
+        mesh.surfaceMesh ||
+        (mesh.level ?? 0) !== room.level ||
+        mesh.category !== "structure"
+      )
+        return false;
+      const b = bounds(mesh);
+      return (
+        Math.abs(b.max[1] - floorElevation(project, room.level)) < 0.04 &&
+        b.max[0] > room.x - room.width / 2 &&
+        b.min[0] < room.x + room.width / 2 &&
+        b.max[2] > room.z - room.depth / 2 &&
+        b.min[2] < room.z + room.depth / 2
+      );
+    });
   const buildingCategories = new Set([
     "structure",
     "windows",
@@ -127,7 +152,7 @@ export async function createPackage(
     (mesh) =>
       scope === "all" ||
       (scope === "selected"
-        ? selected.has(mesh.id)
+        ? belongsToSelection(mesh)
         : scope === "building"
           ? buildingCategories.has(mesh.category)
           : !buildingCategories.has(mesh.category)),
@@ -138,7 +163,13 @@ export async function createPackage(
     );
   if (
     scope === "selected" &&
-    [...selected].some((id) => !scene.some((m) => m.id === id))
+    [...selected].some(
+      (id) =>
+        !scene.some((m) => m.id === id) &&
+        !(
+          !project.world.enabled && project.rooms.some((room) => room.id === id)
+        ),
+    )
   )
     throw new Error(
       "Selected export contains stale object IDs. Select from the current scene.",
@@ -220,6 +251,7 @@ export async function createPackage(
       walkable: mesh.walkable,
       level: mesh.level,
       doorId: mesh.doorId,
+      roomIds: mesh.roomIds,
       surfaceMesh: mesh.surfaceMesh,
       action: mesh.action ?? `create solid ${mesh.solid ? "on" : "off"}`,
     });
@@ -546,6 +578,7 @@ export async function readProducedPackage(
     parsed.mesh.walkable = p.walkable;
     parsed.mesh.level = p.level;
     parsed.mesh.doorId = p.doorId;
+    parsed.mesh.roomIds = p.roomIds;
     parsed.mesh.surfaceMesh = p.surfaceMesh;
     parsed.mesh.materialColor = parsed.color;
     parsed.mesh.textureRef = textureName;
@@ -649,6 +682,12 @@ function validateManifest(m: Manifest) {
       p.action.length > 4096 ||
       (p.walkable !== undefined && typeof p.walkable !== "boolean") ||
       (p.surfaceMesh !== undefined && typeof p.surfaceMesh !== "boolean") ||
+      (p.roomIds !== undefined &&
+        (!Array.isArray(p.roomIds) ||
+          p.roomIds.length > 60 ||
+          p.roomIds.some(
+            (id) => typeof id !== "string" || !/^room-[a-z0-9-]+$/.test(id),
+          ))) ||
       (p.level !== undefined &&
         (!Number.isInteger(p.level) || p.level < 0 || p.level > 5))
     )
