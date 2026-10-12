@@ -61,6 +61,8 @@ The subsequent checkpoint adds 20 plant families, locked individual plant recipe
 
 ## 0.4 room authoring checkpoint
 
-Rectangular authored room boundaries generate shared wall/door geometry, furnishing, connections, locked regeneration and selection metadata. Required room entry routes are checked against actual supporting floor pieces and collision. Tests cover five themes, real shared-wall traversal, lock preservation, overlaps/inaccessible layouts, v3 migration and selected-room archive reconstruction. Floor isolation remains an inspection view; walk mode uses the complete geometry. Automated suite: 65 passing. Polygonal planning, per-unit detachment and remaining city/environment/performance gates are still open.
+Rectangular authored room boundaries generate shared wall/door geometry, furnishing, connections, locked regeneration and selection metadata. Required room entry routes are checked against actual supporting floor pieces and collision. Tests cover five themes, real shared-wall traversal, lock preservation, overlaps/inaccessible layouts, v3 migration and selected-room archive reconstruction. Floor isolation remains an inspection view; walk mode uses the complete geometry. Automated suite: 67 passing. Polygonal planning, per-unit detachment and remaining city/environment/performance gates are still open.
 
 The native calibration download contains actual metre cubes/beam, XYZ landmark, one-sided checker plane, opacity and solid/visible probes, plus candidate placements/groups and recording instructions. It is separate from the editable scene and is explicitly unverified in the native client.
+
+Native/GPU gates remain open. A named-action regression was fixed: targeted creation flags preserve the source defaults, named objects receive individual runtime render bindings, and invisible objects are excluded from pointer selection. Two new fixtures verify source/target state and actual serialized package reconstruction.

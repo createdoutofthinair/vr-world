@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseAction,
+  creationState,
   evaluateMotion,
   ActionRuntime,
 } from "../src/core/actions";
@@ -72,4 +73,20 @@ test("Local-axis, synchronized and candidate rotation adapters remain explicit",
       evaluateMotion(rotate, 1, 1, 0, "candidate-rpm")[1] - Math.PI / 3,
     ) < 1e-9,
   );
+});
+
+test("Named solid and visible actions affect their target without changing the source defaults", () => {
+  const program = parseAction("create solid off name=lamp, visible off lamp");
+  assert.deepEqual(creationState(program, true), {
+    solid: true,
+    visible: true,
+  });
+  const runtime = new ActionRuntime([
+    { id: "source", origin: [0, 0, 0], solid: true, action: program.source },
+    { id: "lamp", origin: [1, 0, 0], solid: true, action: "create name lamp" },
+  ]);
+  assert.equal(runtime.snapshot("source", 0).solid, true);
+  assert.equal(runtime.snapshot("source", 0).visible, true);
+  assert.equal(runtime.snapshot("lamp", 0).solid, false);
+  assert.equal(runtime.snapshot("lamp", 0).visible, false);
 });

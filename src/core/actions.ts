@@ -208,6 +208,7 @@ export function creationState(
     texture?: string;
   } = { solid: defaultSolid, visible: true };
   for (const op of program.triggers.create ?? []) {
+    if (op.target) continue;
     if (op.op === "solid" || op.op === "visible") state[op.op] = op.value;
     else if (op.op === "name" || op.op === "texture") state[op.op] = op.value;
   }

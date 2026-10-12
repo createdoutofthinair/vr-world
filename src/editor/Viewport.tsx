@@ -296,7 +296,10 @@ export function Viewport() {
       );
       const hit = ray
         .intersectObjects(group.children, false)
-        .find((h) => h.object.userData.id || h.object.userData.ids);
+        .find(
+          (h) =>
+            h.object.visible && (h.object.userData.id || h.object.userData.ids),
+        );
       current.current.select(
         hit
           ? (hit.object.userData.id ??
@@ -567,7 +570,7 @@ export function Viewport() {
       if (
         spec.opacity >= 1 &&
         !part.doorId &&
-        !/\b(move|rotate|visible)\b/.test(part.action ?? "")
+        !/\b(move|rotate|visible|name)\b/i.test(part.action ?? "")
       ) {
         const key =
           shape +
@@ -588,7 +591,7 @@ export function Viewport() {
       const mesh = new THREE.Mesh(g, mat);
       mesh.position.fromArray(part.origin);
       mesh.userData = { id: part.id };
-      if (part.action && /\b(move|rotate|visible)\b/.test(part.action))
+      if (part.action && /\b(move|rotate|visible|name)\b/i.test(part.action))
         rt.bindings?.set(part.id, mesh);
       mesh.castShadow = part.material !== "glass";
       mesh.receiveShadow = true;

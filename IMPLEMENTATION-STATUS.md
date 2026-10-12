@@ -29,7 +29,7 @@ The complete plan is **not complete**. The 36 milestones and 117 acceptance item
 
 ## Verification
 
-- Automated suite: **65 tests passing** at this checkpoint; rerun on each geometry/schema/export/runtime change.
+- Automated suite: **67 tests passing** at this checkpoint; rerun on each geometry/schema/export/runtime change.
 - Strict TypeScript and Vite production build pass, including separate generation and export worker bundles. The editor bundle still triggers Vite's large-chunk warning; this is not a measured performance result.
 - Current 0.3 software geometry renders were inspected for five themes, a seeded neighborhood, a two-storey courtyard villa and a jungle creek/bridge/waterfall. Public scene evidence includes hashes and reproducible scripts. These are neither WebGL nor native screenshots; full human-scale visual acceptance remains open.
 - Browser/GPU inspection, resizing, pointer lock, IndexedDB, worker cancellation and long-session resource tests: **not performed**. The supported browser-control skill is unavailable in this managed environment; no replacement browser automation was improvised.
@@ -48,7 +48,7 @@ The complete plan is **not complete**. The 36 milestones and 117 acceptance item
 
 ## Delivery
 
-Public routes remain https://createdoutofthinair.github.io/vr-world/ and https://createdoutofthinair.github.io/vr-world/#editor. This file records the 0.4 source checkpoint; deployment success must be recorded separately after CI. The first 0.3 application checkpoint `f187d41c223a26d883ba4d7833cd5d4a83955100` passed GitHub Pages run [38192025854](https://github.com/createdoutofthinair/vr-world/actions/runs/38192025854). The expanded 0.3 checkpoint `96966efabdc33905119d13bf961405c1e8b0c327` passed Pages run [38194237895](https://github.com/createdoutofthinair/vr-world/actions/runs/38194237895). Public homepage/bundle requests succeeded and all eight current WebP scene files matched local SHA-256 hashes. The 0.4 room-authoring changes require their own deployment check.
+Public routes remain https://createdoutofthinair.github.io/vr-world/ and https://createdoutofthinair.github.io/vr-world/#editor. This file records the 0.4 source checkpoint; deployment success must be recorded separately after CI. The first 0.3 application checkpoint `f187d41c223a26d883ba4d7833cd5d4a83955100` passed GitHub Pages run [38192025854](https://github.com/createdoutofthinair/vr-world/actions/runs/38192025854). The expanded 0.3 checkpoint `96966efabdc33905119d13bf961405c1e8b0c327` passed Pages run [38194237895](https://github.com/createdoutofthinair/vr-world/actions/runs/38194237895). Public homepage/bundle requests succeeded and all eight current WebP scene files matched local SHA-256 hashes. Version 0.4 commit `9c3d9be51c7865df48be3e94346dc0d70bc601f7` passed [Pages run 38196977977](https://github.com/createdoutofthinair/vr-world/actions/runs/38196977977), including all 65 tests. Public HTTP checks matched the homepage, seven current application/worker/style/logo files and eight scene WebP files against local SHA-256. The subsequent named-action regression fix has 67 local passing tests and awaits its own CI check.
 
 ## Next work
 

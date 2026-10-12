@@ -160,3 +160,17 @@ test("Selected authored room exports shared walls, its props and the existing su
     ),
   );
 });
+
+test("Serialized named actions keep the source collision state while controlling the named placement", async () => {
+  const b = await createPackage(fixture()),
+    zip = await JSZip.loadAsync(b.bytes);
+  b.manifest.placements[0].action =
+    "create solid off name=lamp, visible off lamp";
+  b.manifest.placements[1].action = "create name lamp";
+  zip.file("c3-manifest.json", JSON.stringify(b.manifest));
+  const rebuilt = await readProducedPackage(
+    await zip.generateAsync({ type: "uint8array" }),
+  );
+  assert.equal(rebuilt.meshes[0].solid, true);
+  assert.equal(rebuilt.meshes[1].solid, false);
+});
