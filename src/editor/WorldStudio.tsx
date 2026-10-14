@@ -14,7 +14,24 @@ export function WorldStudio() {
       s.update({ world: { ...p.world, ...patch } });
   return (
     <div className="panel-pad properties">
-      <div className="panel-eyebrow">SEEDED CITY</div>
+      <div className="panel-eyebrow">FIXED PARCEL NEIGHBORHOOD</div>
+      <p className="panel-note">
+        Every parcel is {p.world.blockSize / 2} × {p.world.blockSize / 2} m.
+        Building edits never resize parcels. Add a ring to extend the grid with
+        4 parcels per new block.
+      </p>
+      <button
+        className="small-button"
+        disabled={p.world.blocks >= 3 || p.effects.viaduct}
+        onClick={() => change({ enabled: true, blocks: p.world.blocks + 1 })}
+      >
+        ＋ Add parcel ring
+      </button>
+      {p.world.blocks >= 3 && (
+        <p className="panel-note">
+          Current tested limit: 3 × 3 blocks / 36 parcels.
+        </p>
+      )}
       <label className="check-field">
         <input
           type="checkbox"
@@ -128,10 +145,10 @@ export function WorldStudio() {
         {plan.plots.map((plot) => (
           <rect
             key={plot.id}
-            x={plot.x - 5}
-            y={-plot.z - 5}
-            width={10}
-            height={10}
+            x={plot.x - plot.parcelWidth / 2}
+            y={-plot.z - plot.parcelDepth / 2}
+            width={plot.parcelWidth}
+            height={plot.parcelDepth}
             fill={
               plot.park
                 ? "#7b9c64"
@@ -253,6 +270,7 @@ export function WorldStudio() {
                   locks: {
                     ...p.world.locks,
                     [plot.id]: {
+                      ...p.world.locks[plot.id],
                       seed: plot.seed,
                       archetype:
                         kind === "park"
@@ -286,6 +304,7 @@ export function WorldStudio() {
                       locks: {
                         ...p.world.locks,
                         [plot.id]: {
+                          ...p.world.locks[plot.id],
                           seed: plot.seed,
                           archetype: plot.archetype,
                           theme: e.target.value as typeof plot.theme,
@@ -315,6 +334,7 @@ export function WorldStudio() {
                       locks: {
                         ...p.world.locks,
                         [plot.id]: {
+                          ...p.world.locks[plot.id],
                           seed: plot.seed,
                           archetype: plot.archetype,
                           theme: plot.theme,

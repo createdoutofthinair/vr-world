@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { preset } from "../src/core/project";
+import { preset, validateProject } from "../src/core/project";
 import { cityPlan } from "../src/core/city";
 import { buildScene, moveWalker, bounds } from "../src/core/geometry";
 test("Seeded neighborhood has a connected road graph and stable locked buildings", () => {
@@ -258,4 +258,33 @@ test("Street edit validation rejects narrow parcels and unsupported shifted viad
         (-cityPlan(restored).spacing / 2 + 2),
     ) < 1e-10,
   );
+});
+
+test("Selected parcel overrides change emitted building geometry and persist without moving parcels", () => {
+  const p = preset("shop", "temperate");
+  p.world.enabled = true;
+  p.world.blocks = 1;
+  p.world.parkRatio = 0;
+  const plan = cityPlan(p),
+    plot = plan.plots[0];
+  p.world.locks[plot.id] = {
+    seed: plot.seed,
+    archetype: "shop",
+    theme: "temperate",
+    storeys: 1,
+    building: { width: 8, height: 3, windows: false },
+  };
+  const a = buildScene(validateProject(p));
+  p.world.locks[plot.id].building = { width: 12, height: 4, windows: true };
+  const restored = validateProject(JSON.parse(JSON.stringify(p)));
+  const b = buildScene(restored);
+  assert.equal(restored.world.locks[plot.id].building!.width, 12);
+  assert.deepEqual(cityPlan(restored).nodes, plan.nodes);
+  assert.equal(cityPlan(restored).plots[0].parcelWidth, p.world.blockSize / 2);
+  assert.notDeepEqual(
+    a.filter((m) => m.id.startsWith(plot.id)).map((m) => m.positions),
+    b.filter((m) => m.id.startsWith(plot.id)).map((m) => m.positions),
+  );
+  p.world.locks[plot.id].building = { width: 18 };
+  assert.throws(() => buildScene(validateProject(p)), /fixed.*parcel/);
 });

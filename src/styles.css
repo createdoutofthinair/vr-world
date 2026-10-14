@@ -3122,3 +3122,16 @@ h3 {
     max-width: calc(100% - 135px);
   }
 }
+/* Viewport-first dark workspace. Scoped to editor so website colours are preserved. */
+.editor-dark{--ink:#e2edf4;--muted:#9aabba;--line:#314252;color:#e2edf4;background:#111b27;color-scheme:dark}
+.editor-dark :is(.editor-header,.editor-menubar,.editor-status,.world-card,.panel-pad,.command-modal,.workspace-dropdown){background:#152231;color:#e2edf4;border-color:#344858}
+.editor-dark :is(.world-card>header,.form-section,.panel-eyebrow){color:#bfd1df;border-color:#344858}
+.editor-dark :is(input,select,textarea){background:#0e1a27;color:#eef5ff;border-color:#3c5165;accent-color:#69dfc6}
+.editor-dark :is(.selection-card,.plant-row,.panel-note){color:#afc2d2;background:transparent;border-color:#314758}
+.editor-dark :is(.small-button,.icon-button,.editor-actions button,.editor-menubar button){background:#203345;color:#e1edf7;border-color:#38536a}
+.editor-dark .world-card{background:#142333f2;box-shadow:0 24px 70px #0009;border:1px solid #56768b70}
+.editor-dark .world-radial{background:radial-gradient(circle,#17384a 0%,#122331f5 55%,#152e3de8 100%);box-shadow:0 0 0 8px #10233030,0 24px 70px #0009,0 0 40px #4ed9c320;border-color:#69dfc680}
+.editor-dark .world-radial-orbit{position:absolute;inset:38px;border:1px dashed #69dfc640;border-radius:50%;pointer-events:none}
+.editor-dark .world-radial>button{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;height:62px;top:calc(50% - 31px);background:linear-gradient(145deg,#24465c,#152b3d);border:1px solid #6795ab65;box-shadow:0 5px 14px #0005;border-radius:16px;color:#d9efff}
+.editor-dark .world-radial>button svg{color:#78e9d4}.editor-dark .world-radial>button:hover{background:#286574;border-color:#8fffe5;box-shadow:0 0 22px #69dfc644}
+.editor-dark .world-radial-center{background:#0d202de8;box-shadow:inset 0 0 25px #59cfbd18;border-color:#69dfc670}.editor-dark .world-radial-center span{font-size:11px}.editor-dark .world-radial-center svg{color:#7ce7d0}

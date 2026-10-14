@@ -23,6 +23,8 @@ export interface Plot {
   archetype: Archetype;
   theme: Theme;
   storeys: number;
+  parcelWidth: number;
+  parcelDepth: number;
 }
 export interface RoadNode {
   id: string;
@@ -125,6 +127,8 @@ export function cityPlan(p: Project): CityPlan {
           );
         plots.push({
           id,
+          parcelWidth: p.world.blockSize / 2,
+          parcelDepth: p.world.blockSize / 2,
           x: px,
           z: pz,
           yaw: k < 2 ? Math.PI : 0,
@@ -389,6 +393,14 @@ export function buildCity(
       )[plot.seed % 4];
       if (recipe.structure.footprint !== "rectangle") recipe.roof = "hip";
     }
+    Object.assign(recipe, p.world.locks[plot.id]?.building ?? {});
+    if (
+      recipe.width > plot.parcelWidth - 2 ||
+      recipe.depth > plot.parcelDepth - 2
+    )
+      throw new Error(
+        `${plot.id}: building exceeds its fixed ${plot.parcelWidth} × ${plot.parcelDepth} m parcel. Reduce the building or explicitly increase block frontage.`,
+      );
     recipe.seed = plot.seed;
     recipe.textures = p.textures;
     recipe.materialOptions = p.materialOptions;

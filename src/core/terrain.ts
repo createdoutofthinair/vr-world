@@ -37,7 +37,7 @@ export function terrainDomain(p: Project): [number, number] {
       4;
     return [extent * 2, extent * 2];
   }
-  return [p.width + 2 * p.landscape.extent, p.depth + 2 * p.landscape.extent];
+  return [18 + 2 * p.landscape.extent, 18 + 2 * p.landscape.extent];
 }
 export function channelX(p: Project, z: number): number {
   const [width] = terrainDomain(p),

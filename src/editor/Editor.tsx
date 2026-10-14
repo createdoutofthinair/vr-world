@@ -3,7 +3,7 @@ import {
   DockviewApi,
   DockviewReact,
   DockviewReadyEvent,
-  themeLight,
+  themeDark,
 } from "dockview-react";
 import "dockview-react/dist/styles/dockview.css";
 import {
@@ -16,6 +16,12 @@ import {
   Undo2,
   Settings2,
   Box,
+  Paintbrush,
+  Trees,
+  Footprints,
+  Map,
+  Layers3,
+  Home,
   FolderOpen,
   Command,
   X,
@@ -299,7 +305,7 @@ function EditorInner() {
     })),
   ];
   return (
-    <div className="editor-page">
+    <div className="editor-page editor-dark">
       <header className="editor-header">
         <a href="#home" className="editor-brand">
           <img src={logo} alt="c3 logo" />
@@ -491,10 +497,10 @@ function EditorInner() {
                           tabIndex={0}
                           role="button"
                           aria-label={`Select ${plot.id}`}
-                          x={plot.x - 5}
-                          y={-plot.z - 5}
-                          width={10}
-                          height={10}
+                          x={plot.x - plot.parcelWidth / 2}
+                          y={-plot.z - plot.parcelDepth / 2}
+                          width={plot.parcelWidth}
+                          height={plot.parcelDepth}
                           fill={
                             s.selected?.startsWith(plot.id)
                               ? "#5eeee0"
@@ -609,6 +615,7 @@ function EditorInner() {
                     ),
                   }}
                 >
+                  <div className="world-radial-orbit" aria-hidden="true" />
                   <div className="world-radial-center">
                     <Box size={25} />
                     <span>
@@ -624,13 +631,32 @@ function EditorInner() {
                       }}
                       onClick={() => open(id)}
                     >
-                      {id === "properties"
-                        ? "Configure"
-                        : id === "world"
-                          ? "Roads"
-                          : id === "rooms"
-                            ? "Interior"
-                            : panelNames[id].split(" ")[0]}
+                      {(() => {
+                        const Icon =
+                          id === "materials"
+                            ? Paintbrush
+                            : id === "plants" || id === "themes"
+                              ? Trees
+                              : id === "world" || id === "terrain"
+                                ? Map
+                                : id === "rooms"
+                                  ? Footprints
+                                  : id === "building"
+                                    ? Home
+                                    : id === "properties"
+                                      ? Settings2
+                                      : Layers3;
+                        return <Icon size={23} />;
+                      })()}
+                      <span>
+                        {id === "properties"
+                          ? "Configure"
+                          : id === "world"
+                            ? "Roads"
+                            : id === "rooms"
+                              ? "Interior"
+                              : panelNames[id].split(" ")[0]}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -641,7 +667,7 @@ function EditorInner() {
           <DockviewReact
             components={components}
             onReady={ready}
-            theme={themeLight}
+            theme={themeDark}
             disableFloatingGroups={false}
           />
         )}

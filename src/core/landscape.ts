@@ -12,7 +12,7 @@ export function groundHeight(p: Project, x: number, z: number): number {
   return terrainHeight(p, x, z);
 }
 export function parcelSize(p: Project): [number, number] {
-  return [p.width + 2 * p.landscape.extent, p.depth + 2 * p.landscape.extent];
+  return [18 + 2 * p.landscape.extent, 18 + 2 * p.landscape.extent];
 }
 const plantCache = new Map<string, PlantResult>();
 export function plantVariant(

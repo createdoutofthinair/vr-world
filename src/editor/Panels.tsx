@@ -1,3 +1,4 @@
+import { cityPlan } from "../core/city";
 import { createCalibrationKit } from "../core/calibration";
 import { ChangeEvent, useEffect, useState } from "react";
 import {
@@ -144,13 +145,69 @@ function Range({
   );
 }
 export function Properties() {
-  const s = useStudio(),
-    p = s.project,
-    selected = s.meshes.find((m) => m.id === s.selected);
+  const studio = useStudio();
+  const plotId = studio.project.world.enabled
+    ? studio.selected?.match(/^(block-\d+-\d+-plot-\d+)/)?.[1]
+    : undefined;
+  const plot = plotId
+    ? cityPlan(studio.project).plots.find((v) => v.id === plotId)
+    : undefined;
+  const editable = plot && !plot.park;
+  const p = editable
+    ? {
+        ...preset(plot.archetype, plot.theme),
+        ...studio.project.world.locks[plot.id]?.building,
+        seed: plot.seed,
+        name: studio.project.name,
+      }
+    : studio.project;
+  const s = {
+    ...studio,
+    update: (patch: Partial<Project>) => {
+      if (patch.name !== undefined || !studio.project.world.enabled) {
+        studio.update(patch);
+        return;
+      }
+      if (!editable) return;
+      studio.update((current) => ({
+        world: {
+          ...current.world,
+          locks: {
+            ...current.world.locks,
+            [plot.id]: {
+              ...current.world.locks[plot.id],
+              seed: patch.seed ?? plot.seed,
+              archetype: plot.archetype,
+              theme: plot.theme,
+              storeys: plot.storeys,
+              park: false,
+              building: {
+                ...current.world.locks[plot.id]?.building,
+                ...Object.fromEntries(
+                  Object.entries(patch).filter(([key]) => key !== "seed"),
+                ),
+              },
+            },
+          },
+        },
+      }));
+    },
+  };
+  const selected = s.meshes.find((m) => m.id === s.selected);
+  if (studio.project.world.enabled && !editable)
+    return (
+      <div className="panel-pad">
+        <div className="panel-eyebrow">SELECT A BUILDING</div>
+        <p className="panel-note">
+          Click a building in the world, then open Configure. Park and road
+          settings are available under World.
+        </p>
+      </div>
+    );
   return (
     <div className="panel-pad properties">
       <div className="panel-eyebrow">
-        BUILDING RECIPE <span>v0.5</span>
+        {editable ? plot.id : "BUILDING RECIPE"} <span>Live edits</span>
       </div>
       <label className="field">
         Project name
@@ -165,14 +222,14 @@ export function Properties() {
         label="Width"
         value={p.width}
         min={4}
-        max={18}
+        max={editable ? Math.min(18, plot.parcelWidth - 2) : 18}
         onChange={(width) => s.update({ width })}
       />
       <Range
         label="Depth"
         value={p.depth}
         min={4}
-        max={18}
+        max={editable ? Math.min(18, plot.parcelDepth - 2) : 18}
         onChange={(depth) => s.update({ depth })}
       />
       <Range

@@ -37,6 +37,20 @@ export interface WorldSettings {
       theme: Theme;
       storeys: number;
       park?: boolean;
+      building?: Partial<
+        Pick<
+          Project,
+          | "width"
+          | "depth"
+          | "height"
+          | "wallThickness"
+          | "doorWidth"
+          | "roof"
+          | "windows"
+          | "furnished"
+          | "sign"
+        >
+      >;
     }
   >;
 }
@@ -1446,6 +1460,52 @@ export function validateProject(input: unknown): Project {
       (record.park !== undefined && typeof record.park !== "boolean")
     )
       throw new Error("Invalid locked building.");
+    if (record.building) {
+      const candidate = {
+        ...preset(record.archetype, record.theme),
+        ...Object.fromEntries(
+          Object.entries(record.building).filter(([key]) =>
+            [
+              "width",
+              "depth",
+              "height",
+              "wallThickness",
+              "doorWidth",
+              "roof",
+              "windows",
+              "furnished",
+              "sign",
+            ].includes(key),
+          ),
+        ),
+      };
+      candidate.structure = { ...candidate.structure, storeys: record.storeys };
+      const checked = validateProject(candidate);
+      if (
+        checked.width > world.blockSize / 2 - 2 ||
+        checked.depth > world.blockSize / 2 - 2
+      )
+        throw new Error(
+          `${id}: building exceeds its fixed parcel. Reduce the building or explicitly increase block frontage.`,
+        );
+      record.building = Object.fromEntries(
+        Object.keys(record.building)
+          .filter((key) =>
+            [
+              "width",
+              "depth",
+              "height",
+              "wallThickness",
+              "doorWidth",
+              "roof",
+              "windows",
+              "furnished",
+              "sign",
+            ].includes(key),
+          )
+          .map((key) => [key, checked[key as keyof Project]]),
+      );
+    }
     locks[id] = { ...record };
   }
   if (!structure || typeof structure !== "object")
