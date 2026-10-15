@@ -103,3 +103,9 @@ Standalone terrain now uses an 18 m reference footprint plus explicitly configur
 Editor chrome/cards/inputs and advanced Dockview use dark mode. The radial menu has contextual icons, a concentric orbit, highlighted actions and a glass-style dark surface. Scene lighting/materials are preserved. Browser/GPU visual inspection is pending. Automated regression checks cover selected parcel geometry changes, persistence, stable road positions, oversize rejection and standalone fixed boundaries.
 
 Validation: all 87 automated tests pass and TypeScript/Vite production build passes. No browser interaction, visual inspection or GPU evidence was collected for this change.
+
+## Dark IDE default and property feedback
+
+Made the docked IDE workspace the default, using Dockview dark tabs plus dark editor headers, forms, inputs, status bar and contextual cards. A versioned layout key starts a clean layout with Explorer, Properties, viewport, floor plan and diagnostics; world-first editing remains available through World view. Properties identifies the selected parcel and its local scope; generation status is visible in both Properties and the status bar, so retained previous geometry during errors is explicit. This builds on the newer selected-parcel fix from 130fb7e rather than replacing it.
+
+Verification for dark IDE follow-up: 87 tests pass and TypeScript/Vite production build passes. Browser/GPU acceptance remains separate.

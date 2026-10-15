@@ -178,7 +178,7 @@ function defaultLayout(api: DockviewApi) {
       title: panelNames[id],
       position: { referencePanel: "explorer", direction: "within" },
     });
-  api.getPanel("themes")?.api.setActive();
+  api.getPanel("explorer")?.api.setActive();
   api.getPanel("properties")?.api.setActive();
   api.getPanel("viewport")?.api.setActive();
 }
@@ -188,7 +188,7 @@ function EditorInner() {
     radialElement = useRef<HTMLDivElement | null>(null),
     api = useRef<DockviewApi | null>(null),
     layoutSub = useRef<{ dispose: () => void } | null>(null),
-    [focused, setFocused] = useState(true),
+    [focused, setFocused] = useState(false),
     [card, setCard] = useState<string | null>(null),
     [radial, setRadial] = useState<{
       x: number;
@@ -207,7 +207,9 @@ function EditorInner() {
   const ready = ({ api: a }: DockviewReadyEvent) => {
     api.current = a;
     const key =
-      window.innerWidth < 760 ? "c3-layout-v3-narrow" : "c3-layout-v3";
+      window.innerWidth < 760
+        ? "c3-layout-v4-dark-narrow"
+        : "c3-layout-v4-dark";
     let restored = false;
     try {
       const saved = localStorage.getItem(key);
@@ -678,6 +680,9 @@ function EditorInner() {
         </span>
         <span>
           {s.project.width.toFixed(1)} × {s.project.depth.toFixed(1)} m
+        </span>
+        <span role="status" aria-live="polite">
+          {s.generationStatus}
         </span>
         <span className="status-right">
           <Check size={12} /> WebGL workspace{" "}

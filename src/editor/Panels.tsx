@@ -217,6 +217,12 @@ export function Properties() {
           onChange={(e) => s.update({ name: e.target.value })}
         />
       </label>
+      <p className="panel-note">
+        {editable
+          ? "Editing this parcel only; neighboring buildings and land boundaries stay fixed."
+          : "Editing the standalone building."}{" "}
+        {s.generationStatus}
+      </p>
       <div className="form-section">Dimensions</div>
       <Range
         label="Width"
