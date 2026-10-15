@@ -3300,3 +3300,114 @@ h3 {
 .editor-page .form-section {
   background: transparent;
 }
+
+/* Complete the dark theme for nested pane surfaces and viewport chrome. */
+.editor-page {
+  --editor-surface: #252526;
+  --editor-raised: #303034;
+  --editor-border: #47474b;
+  --editor-text: #d4d4d4;
+  --editor-secondary: #adb7c4;
+  scrollbar-color: #626267 #252526;
+}
+.editor-page
+  :is(
+    .floorplan,
+    .diagnostics,
+    .segmented,
+    .tool,
+    .viewport-footer,
+    .walk-prompt,
+    .graphics-error,
+    .touch-navigation button,
+    .touch-navigation small,
+    .preset-card,
+    .world-theme-card,
+    .material-grid button
+  ) {
+  background: var(--editor-surface);
+  color: var(--editor-text);
+  border-color: var(--editor-border);
+}
+.editor-page
+  :is(
+    .preset-card.selected,
+    .material-grid button.selected,
+    .theme-picker button.selected,
+    .segmented button.active,
+    .tool.active
+  ) {
+  background: #173f56;
+  border-color: #3794c6;
+  color: #e2f5ff;
+}
+.editor-page
+  :is(
+    .preset-card:hover,
+    .world-theme-card:hover,
+    .material-grid button:hover,
+    .theme-picker button:hover,
+    .command-modal > button:hover
+  ) {
+  background: var(--editor-raised);
+  color: #fff;
+}
+.editor-page
+  :is(
+    .field,
+    .range-field > span,
+    .range-field b,
+    .toggle-field,
+    .tree-root,
+    .explorer summary,
+    .preset-card b,
+    .preset-card p,
+    .world-theme-card small,
+    .plant-family-row b,
+    .export-heading h3,
+    .export-heading p,
+    .export-stats > div,
+    .export-stats b,
+    .file-list,
+    .diagnostics > div,
+    .diagnostics b,
+    .log-time,
+    .viewport-tag,
+    .axis-compass,
+    .command-modal > div,
+    .command-modal > button,
+    .command-modal > button > span,
+    .status-right > span
+  ) {
+  color: var(--editor-secondary);
+}
+.editor-page
+  :is(.plant-family-row, .plant-row, .material-preview, .command-modal > div) {
+  border-color: var(--editor-border);
+}
+.editor-page .compatibility-note {
+  background: #392f20;
+  color: #e6c78c;
+  border-color: #6b5833;
+}
+.editor-page .diagnostics .warning b {
+  color: #e6c78c;
+}
+.editor-page .floorplan svg text {
+  fill: #c8d6e1;
+}
+.editor-page .world-map {
+  background: #26302d;
+}
+.editor-page .segmented button {
+  color: #c5d0dc;
+}
+.editor-page :is(.tool, .segmented) {
+  box-shadow: 0 3px 12px #0003;
+}
+.editor-page input:focus-visible,
+.editor-page select:focus-visible,
+.editor-page textarea:focus-visible {
+  outline: 2px solid #3794c6;
+  outline-offset: 1px;
+}

@@ -109,3 +109,7 @@ Validation: all 87 automated tests pass and TypeScript/Vite production build pas
 Made the docked IDE workspace the default, using Dockview dark tabs plus dark editor headers, forms, inputs, status bar and contextual cards. A versioned layout key starts a clean layout with Explorer, Properties, viewport, floor plan and diagnostics; world-first editing remains available through World view. Properties identifies the selected parcel and its local scope; generation status is visible in both Properties and the status bar, so retained previous geometry during errors is explicit. This builds on the newer selected-parcel fix from 130fb7e rather than replacing it.
 
 Verification for dark IDE follow-up: 87 tests pass and TypeScript/Vite production build passes. Browser/GPU acceptance remains separate.
+
+## Nested dark pane correction
+
+Extended the editor-scoped dark palette to Floor plan, Diagnostics, building/theme/material cards, viewport toolbars/footer, touch navigation, walk prompt, graphics-error overlay and compatibility warnings. Replaced World Studio's inline light map background with a themed class. Adjusted nested labels and floor-plan annotations for dark-surface contrast without recoloring material/texture previews or generated world geometry. Public website styling remains separately scoped. Production build verified; browser visual inspection recorded separately.

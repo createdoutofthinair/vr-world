@@ -124,7 +124,8 @@ export function WorldStudio() {
       </p>
       <svg
         viewBox={`${-plan.extent} ${-plan.extent} ${plan.extent * 2} ${plan.extent * 2}`}
-        style={{ width: "100%", background: "#e5e9df" }}
+        className="world-map"
+        style={{ width: "100%" }}
         aria-label="City map"
       >
         {plan.edges.map((e) => {
